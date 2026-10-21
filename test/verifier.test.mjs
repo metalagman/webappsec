@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -286,4 +286,45 @@ test("CLI returns stable invocation and unavailable exit codes", async () => {
     assert.equal(report.layers[1].state, "unavailable");
     return true;
   });
+});
+
+test("production retry waits for edge propagation but fails permanent policy errors immediately", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "webappsec-production-retry-"));
+  const fakeNode = path.join(directory, "node");
+  const fakeSleep = path.join(directory, "sleep");
+  const countFile = path.join(directory, "count");
+  const manifest = path.join(directory, "manifest.json");
+  const output = path.join(directory, "report.json");
+  await writeFile(manifest, "{}\n");
+  await writeFile(fakeSleep, "#!/bin/bash\nexit 0\n");
+  await writeFile(fakeNode, `#!/bin/bash
+if [[ $1 == *retry-production-report.mjs ]]; then exec /usr/bin/node "$@"; fi
+count=0
+if [[ -f $FAKE_COUNT ]]; then read -r count < "$FAKE_COUNT"; fi
+count=$((count + 1))
+printf '%s\\n' "$count" > "$FAKE_COUNT"
+if [[ $FAKE_MODE == propagation && $count == 1 ]]; then
+  printf '%s\\n' '{"layers":[{"name":"manifest","state":"pass"},{"name":"production-bytes","state":"pass"},{"name":"response-headers","state":"fail"},{"name":"sri","state":"skipped"}]}'
+  exit 1
+fi
+if [[ $FAKE_MODE == permanent ]]; then
+  printf '%s\\n' '{"layers":[{"name":"manifest","state":"pass"},{"name":"production-bytes","state":"pass"},{"name":"response-headers","state":"pass"},{"name":"sri","state":"fail"}]}'
+  exit 1
+fi
+printf '%s\\n' '{"ok":true,"layers":[]}'
+`);
+  await Promise.all([chmod(fakeNode, 0o755), chmod(fakeSleep, 0o755)]);
+  const retryScript = path.join(root, "scripts/verify-production-retry.sh");
+  const args = [retryScript, manifest, "a".repeat(64), "4f117518-6f75-4ef5-a4d7-19f08ba1181d", output];
+  const environment = { ...process.env, PATH: `${directory}:${process.env.PATH}`, FAKE_COUNT: countFile };
+
+  await execFile("bash", args, { env: { ...environment, FAKE_MODE: "propagation" } });
+  assert.equal(await readFile(countFile, "utf8"), "2\n");
+
+  await writeFile(countFile, "0\n");
+  await assert.rejects(() => execFile("bash", args, { env: { ...environment, FAKE_MODE: "permanent" } }), (error) => {
+    assert.equal(error.code, 1);
+    return true;
+  });
+  assert.equal(await readFile(countFile, "utf8"), "1\n");
 });
