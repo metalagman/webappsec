@@ -286,10 +286,11 @@ test("GitHub 404 and 403 release errors are policy failures, not service outages
   }
 });
 
-test("production verification workflow retains JSON from an explicit configured release", async () => {
+test("production verification workflow retains JSON and publishes separately signed immutable evidence", async () => {
   const workflow = await readFile(path.join(repositoryRoot, ".github/workflows/verify-production.yml"), "utf8");
+  const publisher = await readFile(path.join(repositoryRoot, "scripts/publish-verification.sh"), "utf8");
   assert.match(workflow, /RELEASE_TAG: \$\{\{ inputs\.release \|\| vars\.PRODUCTION_RELEASE_TAG \}\}/);
-  assert.match(workflow, /ref: main/);
+  assert.equal((workflow.match(/ref: \$\{\{ github\.sha \}\}/g) ?? []).length, 2);
   assert.match(workflow, /resolve-release\.mjs[\s\\]+--release "\$RELEASE_TAG"/);
   assert.match(workflow, /if: steps\.resolve\.outputs\.exit_code == '0'/);
   assert.match(workflow, /resolve-source\.mjs[\s\\]+--release "\$RELEASE_TAG"/);
@@ -298,9 +299,20 @@ test("production verification workflow retains JSON from an explicit configured 
   assert.match(workflow, /--source release-source/);
   assert.match(workflow, /env -u GH_TOKEN -u GITHUB_TOKEN/);
   assert.match(workflow, /actions\/upload-artifact@[a-f0-9]{40}/);
+  assert.match(workflow, /actions\/download-artifact@[a-f0-9]{40}/);
   assert.match(workflow, /retention-days: 90/);
   assert.match(workflow, /steps\.verify\.outputs\.exit_code \|\| steps\.source\.outputs\.exit_code \|\| steps\.resolve\.outputs\.exit_code/);
-  assert.doesNotMatch(workflow, /id-token: write|contents: write|secrets\./);
+  const readOnlyJob = workflow.slice(workflow.indexOf("  verify-production:"), workflow.indexOf("  publish-verification:"));
+  const publishingJob = workflow.slice(workflow.indexOf("  publish-verification:"));
+  assert.doesNotMatch(readOnlyJob, /id-token: write|contents: write|secrets\./);
+  assert.match(publishingJob, /needs: verify-production/);
+  assert.match(publishingJob, /contents: write\n      id-token: write/);
+  assert.match(publishingJob, /publish-verification\.sh/);
+  assert.doesNotMatch(publishingJob, /CLOUDFLARE_|secrets\./);
+  assert.match(publisher, /verification-evidence\.mjs build/);
+  assert.match(publisher, /sign-blob --yes --bundle/);
+  assert.match(publisher, /verification-evidence\.mjs verify[\s\S]+--signed/);
+  assert.match(publisher, /gh release create[\s\S]+--draft[\s\S]+gh release edit[\s\S]+--draft=false/);
 });
 
 test("Sigstore TUF DNS failures are classified as unavailable", async () => {

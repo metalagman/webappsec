@@ -75,10 +75,10 @@ Vulnerability report всегда содержит pinned-версию Grype, в
 Verifier запускается из доверенного checkout, а не со страницы сайта:
 
 ```sh
-git checkout v0.2.6
+git checkout v0.2.7
 npm ci
 npm run tools:signing
-npm run verify:release -- --release v0.2.6 --rebuild
+npm run verify:release -- --release v0.2.7 --rebuild
 ```
 
 Команда принимает только явный SemVer tag, скачивает соответствующий GitHub Release и проверяет Cosign bundles с точным GitHub OIDC issuer, repository, workflow path и tag ref. Затем она проверяет signed evidence index, SLSA/CycloneDX in-toto subjects, SPDX/CycloneDX content и завершённые vulnerability reports, воспроизводит manifest/tar из чистого tag checkout и только после этого проверяет production.
@@ -87,7 +87,9 @@ Production-слой скачивает каждый URL с `Accept-Encoding: ide
 
 Exit code `0` означает, что все обязательные проверки выполнены и прошли; `1` — ошибка подписи, evidence policy или production bytes; `2` — неверный вызов CLI; `3` — обязательный GitHub/Sigstore/production service недоступен. Недоступная проверка никогда не становится pass.
 
-Scheduled workflow [Verify production](https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml) использует только явно заданный repository variable `PRODUCTION_RELEASE_TAG`, сохраняет JSON report на 90 дней и не получает write/OIDC/deployment credentials. Verifier и его зависимости берутся из trusted `main`; tag checkout находится в отдельном каталоге и читается только как source data для воспроизводимой сборки. Release assets скачиваются отдельным trusted step, а verifier запускается без GitHub token. Ручной запуск требует явный tag input.
+Scheduled workflow [Verify production](https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml) использует только явно заданный repository variable `PRODUCTION_RELEASE_TAG`. Read-only job с `contents: read` берёт verifier и зависимости из точного revision trusted `main`; tag checkout находится в отдельном каталоге и читается только как source data для воспроизводимой сборки. Release assets скачиваются отдельным trusted step, а verifier запускается без GitHub token и сохраняет точный JSON report как Actions artifact на 90 дней. Ручной запуск требует явный tag input.
+
+Только после успешной проверки отдельный publisher job получает `contents: write` и короткоживущий `id-token: write`; Cloudflare credentials ему не доступны. Он повторно валидирует все девять слоёв, сохраняет точный JSON и детерминированный human report, связывает их SHA-256 index и verification record, подписывает каждый файл keyless Cosign и публикует immutable Release `verification-<tag>-<run-id>`. Этот job ничего не разворачивает и не меняет production.
 
 ## Signed release pipeline
 

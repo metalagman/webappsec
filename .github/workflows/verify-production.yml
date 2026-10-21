@@ -21,13 +21,15 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      release_tag: ${{ steps.target.outputs.tag }}
     env:
       RELEASE_TAG: ${{ inputs.release || vars.PRODUCTION_RELEASE_TAG }}
     steps:
       - name: Check out trusted verifier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 1
       - name: Install exact Node.js
@@ -35,6 +37,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
+      - name: Resolve explicit verification target
+        id: target
+        run: |
+          [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
       - name: Install locked verifier
         run: npm ci --ignore-scripts && npm run tools:signing
       - name: Download the explicit immutable release
@@ -89,3 +97,35 @@ jobs:
         env:
           VERIFY_EXIT_CODE: ${{ steps.verify.outputs.exit_code || steps.source.outputs.exit_code || steps.resolve.outputs.exit_code || '2' }}
         run: '[[ "$VERIFY_EXIT_CODE" == 0 ]]'
+
+  publish-verification:
+    needs: verify-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out trusted publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Install locked verifier and signer
+        run: npm ci --ignore-scripts && npm run tools:signing
+      - name: Download exact report from read-only job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: production-verification-${{ needs.verify-production.outputs.release_tag }}-${{ github.run_id }}
+          path: .artifacts/verification-input
+      - name: Validate, sign, and publish immutable verification evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify-production.outputs.release_tag }}
+        run: scripts/publish-verification.sh "$RELEASE_TAG" .artifacts/verification-input
