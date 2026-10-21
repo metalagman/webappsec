@@ -22,15 +22,21 @@ export XDG_CONFIG_HOME="$RUNNER_TEMP/wrangler-config"
 export WRANGLER_SEND_METRICS=false
 mkdir -p "$XDG_CONFIG_HOME"
 
-preview_url=null
+preview_url=
 preview_report=null
 preview_browser=null
+from_version=
+from_deployment=
 if [[ $mode == bootstrap ]]; then
   export WRANGLER_OUTPUT_FILE_PATH="$RUNNER_TEMP/wrangler-bootstrap.jsonl"
   npx wrangler deploy --config "$config" --tag "$manifest_digest" \
     --message "Bootstrap signed release $release_tag ($manifest_digest)"
   version_id=$(jq -ers 'map(select(.type == "deploy")) | last.version_id' "$WRANGLER_OUTPUT_FILE_PATH")
 else
+  npx wrangler deployments status --config "$config" --json > .artifacts/prior-deployment-status.json
+  from_deployment=$(jq -er .id .artifacts/prior-deployment-status.json)
+  from_version=$(jq -er '.versions[] | select(.percentage == 100) | .version_id' .artifacts/prior-deployment-status.json)
+  [[ $from_deployment =~ ^[a-f0-9-]{36}$ && $from_version =~ ^[a-f0-9-]{36}$ ]]
   export WRANGLER_OUTPUT_FILE_PATH="$RUNNER_TEMP/wrangler-upload.jsonl"
   npx wrangler versions upload --config "$config" --tag "$manifest_digest" \
     --message "Upload signed release $release_tag ($manifest_digest)"
@@ -66,12 +72,14 @@ verified_at=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 jq -cn \
   --arg action "$mode" --arg tag "$release_tag" --arg revision "$revision" --arg manifest "$manifest_digest" \
   --arg workflow .github/workflows/deploy.yml --arg ref "$GITHUB_REF" --arg run "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-  --arg version "$version_id" --arg deployment "$deployment_id" --argjson versionUrl "$preview_url" --arg verifiedAt "$verified_at" \
+  --arg version "$version_id" --arg deployment "$deployment_id" --arg versionUrl "$preview_url" --arg verifiedAt "$verified_at" \
+  --arg fromVersion "$from_version" --arg fromDeployment "$from_deployment" \
   '{schema:"https://webappsec.metalagman.dev/schema/deployment-record-v1",version:1,action:$action,
     sourceRelease:{tag:$tag,revision:$revision,manifestDigest:$manifest,url:("https://github.com/metalagman/webappsec/releases/tag/"+$tag)},
     github:{repository:"metalagman/webappsec",workflow:$workflow,ref:$ref,runUrl:$run},
-    cloudflare:{workerName:"webappsec",wranglerVersion:"4.151.3",versionId:$version,deploymentId:$deployment,versionUrl:$versionUrl},
-    production:{origin:"https://webappsec.metalagman.dev",verifiedAt:$verifiedAt}}' > .artifacts/deployment-record-input.json
+    cloudflare:{workerName:"webappsec",wranglerVersion:"4.151.3",versionId:$version,deploymentId:$deployment,versionUrl:(if $versionUrl=="" then null else $versionUrl end)},
+    production:{origin:"https://webappsec.metalagman.dev",verifiedAt:$verifiedAt},
+    transition:{fromVersionId:(if $fromVersion=="" then null else $fromVersion end),fromDeploymentId:(if $fromDeployment=="" then null else $fromDeployment end),targetDeploymentRelease:null}}' > .artifacts/deployment-record-input.json
 node scripts/deployment-evidence.mjs build --record .artifacts/deployment-record-input.json \
   --report .artifacts/production-report.json --output .artifacts/deployment-evidence > /dev/null
 

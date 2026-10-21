@@ -72,10 +72,14 @@ test("verifier accepts exact local production bytes and SRI without executing co
 test("verifier enforces the selected Worker version and preview noindex headers", async () => {
   const fixture = await releaseFixture();
   const versionId = "4f117518-6f75-4ef5-a4d7-19f08ba1181d";
-  const fetchImplementation = fixtureFetch(fixture, ({ body }) => new Response(body, {
+  const fetchImplementation = fixtureFetch(fixture, ({ url, body }) => new Response(body, {
     headers: {
+      "Cache-Control": url.pathname.startsWith("/app/") ? "public, max-age=31536000, immutable" : "no-cache",
       "Content-Length": body.length,
-      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Permissions-Policy": "camera=(), geolocation=(), microphone=()",
+      "Referrer-Policy": "no-referrer",
       "Strict-Transport-Security": "max-age=31536000",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",

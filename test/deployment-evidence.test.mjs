@@ -40,11 +40,39 @@ function record() {
       versionUrl: "https://4f117518-webappsec.demo-account.workers.dev",
     },
     production: { origin: "https://webappsec.metalagman.dev", verifiedAt: "2026-10-22T00:00:00.000Z" },
+    transition: {
+      fromVersionId: "5f117518-6f75-4ef5-a4d7-19f08ba1181d",
+      fromDeploymentId: "6f117518-6f75-4ef5-a4d7-19f08ba1181d",
+      targetDeploymentRelease: null,
+    },
   };
 }
 
+function coreReport(origin, noindex) {
+  return {
+    ok: true,
+    result: "verified",
+    exitCode: 0,
+    manifestDigest,
+    layers: ["manifest", "production-bytes", "response-headers", "sri"].map((name) => ({ name, state: "pass", detail: "checked" })),
+    target: { origin, expectedHeaders: { release: manifestDigest, versionId, noindex } },
+  };
+}
+
+function browser(origin) {
+  return { ok: true, origin, title: "Proof of Deploy", sriResources: 2 };
+}
+
 function report() {
-  return { ok: true, result: "verified", exitCode: 0, manifestDigest, layers: [{ name: "production-bytes", state: "pass", detail: "exact" }] };
+  const production = coreReport("https://webappsec.metalagman.dev", false);
+  return {
+    ...production,
+    deploymentChecks: {
+      preview: coreReport("https://4f117518-webappsec.demo-account.workers.dev", true),
+      previewBrowser: browser("https://4f117518-webappsec.demo-account.workers.dev"),
+      productionBrowser: browser("https://webappsec.metalagman.dev"),
+    },
+  };
 }
 
 test("deployment evidence canonically binds a passing production report to one Worker version", async () => {
@@ -90,6 +118,39 @@ test("deployment evidence rejects failed reports and record tampering", async ()
   await assert.rejects(() => verifyDeploymentEvidence(directory), /canonical|index file mismatch/);
 });
 
+test("deployment evidence rejects missing preview, browser, header layers, and no-op transitions", async (t) => {
+  await t.test("missing preview", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-missing-preview-"));
+    const candidate = report();
+    candidate.deploymentChecks.preview = null;
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /object|preview/);
+  });
+  await t.test("missing header layer", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-missing-header-"));
+    const candidate = report();
+    candidate.layers.splice(2, 1);
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /incomplete layers/);
+  });
+  await t.test("wrong browser origin", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-browser-origin-"));
+    const candidate = report();
+    candidate.deploymentChecks.previewBrowser.origin = "https://attacker.example";
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /browser verification/);
+  });
+  await t.test("wrong verified Worker version", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-wrong-report-version-"));
+    const candidate = report();
+    candidate.target.expectedHeaders.versionId = "7f117518-6f75-4ef5-a4d7-19f08ba1181d";
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /target mismatch/);
+  });
+  await t.test("same source and target version", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-noop-transition-"));
+    const candidate = record();
+    candidate.transition.fromVersionId = candidate.cloudflare.versionId;
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: candidate, verificationReport: report() }), /must change/);
+  });
+});
+
 test("deployment workflows are tag-bound, environment-protected, and promote an explicit version", async () => {
   const root = path.resolve(new URL("..", import.meta.url).pathname);
   const deployWorkflow = await readFile(path.join(root, ".github/workflows/deploy.yml"), "utf8");
@@ -102,6 +163,10 @@ test("deployment workflows are tag-bound, environment-protected, and promote an 
     assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
     assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
     assert.doesNotMatch(workflow, /pull_request:|schedule:/);
+    assert.doesNotMatch(workflow.split("    steps:", 1)[0], /secrets\.|GH_TOKEN|CLOUDFLARE_/);
+    for (const line of workflow.split("\n").filter((candidate) => candidate.trimStart().startsWith("run:"))) {
+      assert.doesNotMatch(line, /\$\{\{\s*inputs\./);
+    }
     for (const line of workflow.split("\n").filter((candidate) => candidate.includes("uses:"))) {
       assert.match(line, /uses: [A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[a-f0-9]{40}(?:\s+#\s+v[0-9.]+)?$/);
     }

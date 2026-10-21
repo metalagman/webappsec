@@ -41,10 +41,6 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out immutable rollback workflow tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,6 +62,13 @@ jobs:
       - name: Install locked verifier and browser
         run: npm ci --ignore-scripts && npx playwright install --with-deps chromium && npm run tools:signing
       - name: Reverify target, deploy explicit version, and publish signed record
-        run: >-
-          scripts/rollback-ci.sh "${{ inputs.action }}" "${{ inputs.release }}"
-          "${{ inputs.manifest_digest }}" "${{ inputs.version_id }}" "${{ inputs.deployment_release }}"
+        env:
+          TRANSITION_ACTION: ${{ inputs.action }}
+          RELEASE_TAG: ${{ inputs.release }}
+          MANIFEST_DIGEST: ${{ inputs.manifest_digest }}
+          VERSION_ID: ${{ inputs.version_id }}
+          DEPLOYMENT_RELEASE: ${{ inputs.deployment_release }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/rollback-ci.sh "$TRANSITION_ACTION" "$RELEASE_TAG" "$MANIFEST_DIGEST" "$VERSION_ID" "$DEPLOYMENT_RELEASE"

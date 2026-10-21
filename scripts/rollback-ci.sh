@@ -34,6 +34,10 @@ export XDG_CONFIG_HOME="$RUNNER_TEMP/wrangler-config"
 export WRANGLER_SEND_METRICS=false
 export WRANGLER_OUTPUT_FILE_PATH="$RUNNER_TEMP/wrangler-$action.jsonl"
 mkdir -p "$XDG_CONFIG_HOME"
+npx wrangler deployments status --config "$config" --json > .artifacts/prior-deployment-status.json
+from_deployment=$(jq -er .id .artifacts/prior-deployment-status.json)
+from_version=$(jq -er '.versions[] | select(.percentage == 100) | .version_id' .artifacts/prior-deployment-status.json)
+[[ $from_deployment =~ ^[a-f0-9-]{36}$ && $from_version =~ ^[a-f0-9-]{36}$ && $from_version != "$version_id" ]]
 npx wrangler versions view "$version_id" --config "$config" --json > .artifacts/version.json
 [[ $(jq -er .id .artifacts/version.json) == "$version_id" ]]
 [[ $(jq -er '.annotations["workers/tag"]' .artifacts/version.json) == "$manifest_digest" ]]
@@ -57,11 +61,13 @@ jq -cn \
   --arg action "$action" --arg tag "$release_tag" --arg revision "$revision" --arg manifest "$manifest_digest" \
   --arg ref "$GITHUB_REF" --arg run "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
   --arg version "$version_id" --arg deployment "$deployment_id" --argjson versionUrl "$version_url" --arg verifiedAt "$verified_at" \
+  --arg fromVersion "$from_version" --arg fromDeployment "$from_deployment" --arg targetRelease "$target_deployment_release" \
   '{schema:"https://webappsec.metalagman.dev/schema/deployment-record-v1",version:1,action:$action,
     sourceRelease:{tag:$tag,revision:$revision,manifestDigest:$manifest,url:("https://github.com/metalagman/webappsec/releases/tag/"+$tag)},
     github:{repository:"metalagman/webappsec",workflow:".github/workflows/rollback.yml",ref:$ref,runUrl:$run},
     cloudflare:{workerName:"webappsec",wranglerVersion:"4.151.3",versionId:$version,deploymentId:$deployment,versionUrl:$versionUrl},
-    production:{origin:"https://webappsec.metalagman.dev",verifiedAt:$verifiedAt}}' > .artifacts/deployment-record-input.json
+    production:{origin:"https://webappsec.metalagman.dev",verifiedAt:$verifiedAt},
+    transition:{fromVersionId:$fromVersion,fromDeploymentId:$fromDeployment,targetDeploymentRelease:$targetRelease}}' > .artifacts/deployment-record-input.json
 node scripts/deployment-evidence.mjs build --record .artifacts/deployment-record-input.json \
   --report .artifacts/production-report.json --output .artifacts/deployment-evidence > /dev/null
 
