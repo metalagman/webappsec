@@ -48,14 +48,14 @@ function record() {
   };
 }
 
-function coreReport(origin, noindex) {
+function coreReport(origin, noindex, release = manifestDigest) {
   return {
     ok: true,
     result: "verified",
     exitCode: 0,
     manifestDigest,
     layers: ["manifest", "production-bytes", "response-headers", "sri"].map((name) => ({ name, state: "pass", detail: "checked" })),
-    target: { origin, expectedHeaders: { release: manifestDigest, versionId, noindex } },
+    target: { origin, expectedHeaders: { release, versionId, noindex } },
   };
 }
 
@@ -68,7 +68,7 @@ function report() {
   return {
     ...production,
     deploymentChecks: {
-      preview: coreReport("https://4f117518-webappsec.demo-account.workers.dev", true),
+      preview: coreReport("https://4f117518-webappsec.demo-account.workers.dev", true, "unknown"),
       previewBrowser: browser("https://4f117518-webappsec.demo-account.workers.dev"),
       productionBrowser: browser("https://webappsec.metalagman.dev"),
     },
@@ -143,6 +143,12 @@ test("deployment evidence rejects missing preview, browser, header layers, and n
     candidate.target.expectedHeaders.versionId = "7f117518-6f75-4ef5-a4d7-19f08ba1181d";
     await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /target mismatch/);
   });
+  await t.test("preview cannot claim another release", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "webappsec-wrong-preview-release-"));
+    const candidate = report();
+    candidate.deploymentChecks.preview.target.expectedHeaders.release = "b".repeat(64);
+    await assert.rejects(() => createDeploymentEvidence({ outputDirectory: directory, record: record(), verificationReport: candidate }), /target mismatch/);
+  });
   await t.test("same source and target version", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "webappsec-noop-transition-"));
     const candidate = record();
@@ -175,6 +181,7 @@ test("deployment workflows are tag-bound, environment-protected, and promote an 
   assert.ok(deployScript.indexOf("verify-production.mjs") < deployScript.indexOf("versions deploy"));
   assert.match(deployScript, /--version-id "\$version_id" --percentage 100/);
   assert.match(deployScript, /WRANGLER_OUTPUT_FILE_PATH/);
+  assert.match(deployScript, /--expected-release unknown --expected-version "\$version_id" --noindex true --preview/);
   assert.match(deployScript, /verify-production-retry\.sh/);
   assert.match(rollbackScript, /deployment-evidence\.mjs verify/);
   assert.match(rollbackScript, /versions deploy --config "\$config" --version-id "\$version_id" --percentage 100/);

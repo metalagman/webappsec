@@ -247,6 +247,38 @@ test("CLI returns stable invocation and unavailable exit codes", async () => {
   }
 
   const fixture = await releaseFixture();
+  const invalidPreviewManifest = path.join(await mkdtemp(path.join(tmpdir(), "webappsec-preview-cli-")), "manifest.json");
+  await writeFile(invalidPreviewManifest, "{invalid");
+  const previewArgs = [
+    "--manifest", invalidPreviewManifest,
+    "--origin", "https://00000000-webappsec.invalid-account.workers.dev",
+    "--expected-release", "unknown",
+    "--expected-version", "4f117518-6f75-4ef5-a4d7-19f08ba1181d",
+    "--noindex", "true",
+  ];
+  await assert.rejects(() => execFile(process.execPath, [cli, ...previewArgs]), (error) => {
+    assert.equal(error.code, 2);
+    assert.match(error.stderr, /^Usage:/);
+    return true;
+  });
+  for (const args of [
+    previewArgs.with(3, "https://webappsec.metalagman.dev"),
+    previewArgs.with(previewArgs.length - 1, "false"),
+  ]) {
+    await assert.rejects(() => execFile(process.execPath, [cli, ...args, "--preview"]), (error) => {
+      assert.equal(error.code, 2);
+      assert.match(error.stderr, /^Usage:/);
+      return true;
+    });
+  }
+  await assert.rejects(() => execFile(process.execPath, [cli, ...previewArgs, "--preview", "--json"]), (error) => {
+    assert.equal(error.code, 1);
+    const report = JSON.parse(error.stdout);
+    assert.equal(report.result, "verification-failed");
+    assert.equal(report.layers[0].state, "fail");
+    return true;
+  });
+
   await assert.rejects(() => execFile(process.execPath, [cli, "--manifest", fixture.manifestPath, "--origin", "http://127.0.0.1:1", "--json"]), (error) => {
     assert.equal(error.code, 3);
     const report = JSON.parse(error.stdout);

@@ -45,7 +45,7 @@ else
   [[ $preview_url == https://*-webappsec.*.workers.dev ]]
   set +e
   node scripts/verify-production.mjs --manifest .artifacts/deploy-workspace/manifest.json \
-    --origin "$preview_url" --expected-release "$manifest_digest" --expected-version "$version_id" --noindex true --json \
+    --origin "$preview_url" --expected-release unknown --expected-version "$version_id" --noindex true --preview --json \
     > .artifacts/preview-report.json
   preview_code=$?
   set -e
