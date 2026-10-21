@@ -5,3 +5,12 @@
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Local build and test outputs
+node_modules/
+dist/
+.cache/
+test-results/
+playwright-report/
+.artifacts/
+.bin/

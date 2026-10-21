@@ -1,0 +1,89 @@
+name: Verify production
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Immutable SemVer release tag to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ inputs.release || vars.PRODUCTION_RELEASE_TAG }}
+    steps:
+      - name: Check out trusted verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Install locked verifier
+        run: npm ci --ignore-scripts && npm run tools:signing
+      - name: Download the explicit immutable release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .artifacts/verification-release
+          set +e
+          node scripts/resolve-release.mjs \
+            --release "$RELEASE_TAG" \
+            --output .artifacts/verification-release \
+            --json > verification-report.json
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Check out release source as untrusted data
+        if: steps.resolve.outputs.exit_code == '0'
+        id: source
+        run: |
+          set +e
+          node scripts/resolve-source.mjs \
+            --release "$RELEASE_TAG" \
+            --output release-source \
+            --json > verification-report.json
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Verify signed release, rebuild, production bytes, and SRI
+        if: steps.resolve.outputs.exit_code == '0' && steps.source.outputs.exit_code == '0'
+        id: verify
+        run: |
+          set +e
+          env -u GH_TOKEN -u GITHUB_TOKEN node scripts/verify-release.mjs \
+            --evidence .artifacts/verification-release \
+            --expected-tag "$RELEASE_TAG" \
+            --source release-source \
+            --rebuild --json > verification-report.json
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Retain machine-readable report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: production-verification-${{ env.RELEASE_TAG }}-${{ github.run_id }}
+          path: verification-report.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce verification result
+        if: always()
+        env:
+          VERIFY_EXIT_CODE: ${{ steps.verify.outputs.exit_code || steps.source.outputs.exit_code || steps.resolve.outputs.exit_code || '2' }}
+        run: '[[ "$VERIFY_EXIT_CODE" == 0 ]]'
