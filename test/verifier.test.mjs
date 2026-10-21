@@ -69,6 +69,45 @@ test("verifier accepts exact local production bytes and SRI without executing co
   assert.match(humanReport(report), /PASS deployment verified/);
 });
 
+test("verifier enforces the selected Worker version and preview noindex headers", async () => {
+  const fixture = await releaseFixture();
+  const versionId = "4f117518-6f75-4ef5-a4d7-19f08ba1181d";
+  const fetchImplementation = fixtureFetch(fixture, ({ body }) => new Response(body, {
+    headers: {
+      "Content-Length": body.length,
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      "Strict-Transport-Security": "max-age=31536000",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Robots-Tag": "noindex, nofollow",
+      "X-Webappsec-Release": fixture.digest,
+      "X-Webappsec-Worker-Version": versionId,
+    },
+  }));
+  const report = await verifyProduction({
+    manifestPath: fixture.manifestPath,
+    origin: "https://4f117518-webappsec.example.workers.dev",
+    expectedHeaders: { release: fixture.digest, versionId, noindex: true },
+    fetchImplementation,
+  });
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.layers.map(({ name, state }) => [name, state]), [
+    ["manifest", "pass"],
+    ["production-bytes", "pass"],
+    ["response-headers", "pass"],
+    ["sri", "pass"],
+  ]);
+
+  const wrongVersion = await verifyProduction({
+    manifestPath: fixture.manifestPath,
+    origin: "https://4f117518-webappsec.example.workers.dev",
+    expectedHeaders: { release: fixture.digest, versionId: "00000000-0000-4000-8000-000000000000", noindex: true },
+    fetchImplementation,
+  });
+  assert.equal(wrongVersion.ok, false);
+  assert.match(wrongVersion.layers.find(({ name }) => name === "response-headers").detail, /X-Webappsec-Worker-Version/);
+});
+
 test("verifier fails closed for changed bytes, off-origin redirect, timeout, and wrong SRI", async (t) => {
   await t.test("changed bytes", async () => {
     const fixture = await releaseFixture();

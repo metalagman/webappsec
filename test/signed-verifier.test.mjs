@@ -12,6 +12,7 @@ import { canonicalJson } from "../lib/canonical-json.mjs";
 import { grypeVersion, lockInventory, syftVersion, unavailableVulnerabilityReport, vulnerabilityReport } from "../lib/evidence.mjs";
 import { assembleReleaseEvidence, authenticationBundleNames, cycloneDxPredicateType, slsaPredicateType } from "../lib/release-evidence.mjs";
 import {
+  classifyResolutionError,
   reproduceRelease,
   resolveExplicitEvidence,
   signerIdentity,
@@ -300,6 +301,12 @@ test("production verification workflow retains JSON from an explicit configured 
   assert.match(workflow, /retention-days: 90/);
   assert.match(workflow, /steps\.verify\.outputs\.exit_code \|\| steps\.source\.outputs\.exit_code \|\| steps\.resolve\.outputs\.exit_code/);
   assert.doesNotMatch(workflow, /id-token: write|contents: write|secrets\./);
+});
+
+test("Sigstore TUF DNS failures are classified as unavailable", async () => {
+  const error = new Error("cosign exited 1: updating TUF root: lookup tuf-repo-cdn.sigstore.dev: socket: operation not permitted");
+  const classified = classifyResolutionError(error);
+  assert.ok(classified instanceof VerificationUnavailableError);
 });
 
 test("release resolver always emits a stable JSON report", async () => {

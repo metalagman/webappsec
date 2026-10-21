@@ -90,6 +90,7 @@ h1 em { color: transparent; font-style: normal; -webkit-text-stroke: 1px var(--c
 .proof-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--line); color: var(--muted); font: .68rem var(--mono); text-transform: uppercase; }
 .status { padding: .35rem .5rem; border: 1px solid currentColor; }
 .status.pending { color: #ffd166; }
+.status.signed { color: var(--acid); }
 .proof-card dl { margin: .5rem 0 1rem; }
 .proof-card dl div { display: grid; grid-template-columns: 5.2rem 1fr; gap: .8rem; padding: .8rem 0; border-bottom: 1px solid var(--line); }
 .proof-card dt { color: var(--dim); font: .68rem var(--mono); text-transform: uppercase; }

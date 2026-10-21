@@ -31,6 +31,29 @@ Production job использует GitHub Environment `production` и два En
 
 Deploy обязан использовать подписанный content-addressed release, повторно проверить его до загрузки и вызвать pinned Wrangler с tag, равным digest manifest. Worker source, общий модуль content-addressing policy и `wrangler.jsonc` входят в manifest как deploy inputs, поэтому их подмена меняет release identity.
 
+Первый запуск выполняется вручную из SemVer tag и создаёт Worker, Version URL и Custom Domain:
+
+```sh
+gh workflow run deploy.yml --ref <tag> -f release=<tag> -f bootstrap=true
+```
+
+Следующие публикации загружают новую версию без переключения трафика, проверяют её Version URL по точным байтам, SRI, security headers, `noindex` и в headless Chromium, после чего направляют 100% трафика на тот же `version_id`:
+
+```sh
+gh workflow run deploy.yml --ref <tag> -f release=<tag> -f bootstrap=false
+```
+
+Каждый успешный переход публикует отдельный immutable GitHub Release `deployment-<action>-<tag>-<run-id>`. В нём находятся канонические deployment record, production verifier report, их SHA-256 index и три keyless Cosign bundles. Запись фиксирует source release, manifest digest, GitHub run, Wrangler 4.151.3, Cloudflare Worker version и deployment ID.
+
+Rollback никогда не выбирает «предыдущую» версию автоматически. Оператор передаёт tag, manifest digest, Worker version UUID и подписанный Deployment Release. Workflow перепроверяет обе цепочки подписей и Cloudflare version tag до переключения; restore использует те же явные поля:
+
+```sh
+gh workflow run rollback.yml --ref <workflow-tag> \
+  -f action=rollback -f release=<target-tag> \
+  -f manifest_digest=<sha256> -f version_id=<uuid> \
+  -f deployment_release=<immutable-deployment-release>
+```
+
 Официальная документация: [Static Assets](https://developers.cloudflare.com/workers/static-assets/), [Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/), [Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/), [Version Metadata](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/), [API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/).
 
 ## SBOM и vulnerability evidence
