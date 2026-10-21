@@ -118,7 +118,13 @@ async function evidenceFixture() {
   const descriptor = {
     version: grypeVersion,
     timestamp: "2026-10-21T12:34:56Z",
-    db: { status: { built: "2026-10-20T00:00:00Z", schemaVersion: "v6.1.3", checksum: "sha256:0123456789abcdef" } },
+    db: { status: {
+      built: "2026-10-20T00:00:00Z",
+      schemaVersion: "v6.1.3",
+      from: "https://grype.anchore.io/databases/v6/vulnerability-db.tar.zst",
+      path: "/tmp/grype/vulnerability.db",
+      valid: true,
+    } },
   };
   const documents = {
     "runtime.spdx.json": spdx,

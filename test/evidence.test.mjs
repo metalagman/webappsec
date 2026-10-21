@@ -184,7 +184,9 @@ test("vulnerability evidence distinguishes zero findings, findings, and unavaila
       status: {
         built: "2026-10-20T00:00:00Z",
         schemaVersion: "v6.1.3",
-        checksum: "sha256:0123456789abcdef",
+        from: "https://grype.anchore.io/databases/v6/vulnerability-db.tar.zst",
+        path: "/tmp/grype/vulnerability.db",
+        valid: true,
       },
     },
   };
@@ -219,6 +221,13 @@ test("vulnerability evidence distinguishes zero findings, findings, and unavaila
     scope: "runtime",
     manifestDigest,
     grype: { descriptor: { ...descriptor, db: {} }, matches: [] },
+  }), /schema validation|scanner metadata/);
+  const invalidDatabase = structuredClone(descriptor);
+  invalidDatabase.db.status.valid = false;
+  assert.throws(() => vulnerabilityReport({
+    scope: "runtime",
+    manifestDigest,
+    grype: { descriptor: invalidDatabase, matches: [] },
   }), /schema validation|scanner metadata/);
 
   const inconsistentCounts = structuredClone(clean);
