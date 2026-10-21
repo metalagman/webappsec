@@ -1,5 +1,7 @@
 name: Verify production
 
+# This workflow is intentionally read-only and runs verifier code from trusted main.
+
 on:
   schedule:
     - cron: "17 3 * * *"
