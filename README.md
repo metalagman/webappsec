@@ -75,10 +75,10 @@ Vulnerability report всегда содержит pinned-версию Grype, в
 Verifier запускается из доверенного checkout, а не со страницы сайта:
 
 ```sh
-git checkout v0.2.1
+git checkout v0.2.2
 npm ci
 npm run tools:signing
-npm run verify:release -- --release v0.2.1 --rebuild
+npm run verify:release -- --release v0.2.2 --rebuild
 ```
 
 Команда принимает только явный SemVer tag, скачивает соответствующий GitHub Release и проверяет Cosign bundles с точным GitHub OIDC issuer, repository, workflow path и tag ref. Затем она проверяет signed evidence index, SLSA/CycloneDX in-toto subjects, SPDX/CycloneDX content и завершённые vulnerability reports, воспроизводит manifest/tar из чистого tag checkout и только после этого проверяет production.
