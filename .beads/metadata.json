@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "webappsec",
+  "project_id": "6758e22e-ab93-41a0-b320-f1bdd32d4444"
+}
