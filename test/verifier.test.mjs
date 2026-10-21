@@ -298,7 +298,7 @@ test("production retry waits for edge propagation but fails permanent policy err
   await writeFile(manifest, "{}\n");
   await writeFile(fakeSleep, "#!/bin/bash\nexit 0\n");
   await writeFile(fakeNode, `#!/bin/bash
-if [[ $1 == *retry-production-report.mjs ]]; then exec /usr/bin/node "$@"; fi
+if [[ $1 == *retry-production-report.mjs ]]; then exec "$REAL_NODE" "$@"; fi
 count=0
 if [[ -f $FAKE_COUNT ]]; then read -r count < "$FAKE_COUNT"; fi
 count=$((count + 1))
@@ -316,7 +316,7 @@ printf '%s\\n' '{"ok":true,"layers":[]}'
   await Promise.all([chmod(fakeNode, 0o755), chmod(fakeSleep, 0o755)]);
   const retryScript = path.join(root, "scripts/verify-production-retry.sh");
   const args = [retryScript, manifest, "a".repeat(64), "4f117518-6f75-4ef5-a4d7-19f08ba1181d", output];
-  const environment = { ...process.env, PATH: `${directory}:${process.env.PATH}`, FAKE_COUNT: countFile };
+  const environment = { ...process.env, PATH: `${directory}:${process.env.PATH}`, FAKE_COUNT: countFile, REAL_NODE: process.execPath };
 
   await execFile("bash", args, { env: { ...environment, FAKE_MODE: "propagation" } });
   assert.equal(await readFile(countFile, "utf8"), "2\n");
