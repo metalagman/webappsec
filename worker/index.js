@@ -33,7 +33,7 @@ function addHeaders(response, { versionId, versionTag, noindex, secure }) {
   headers.set("X-Frame-Options", "DENY");
   headers.set("X-Webappsec-Release", safeMetadata(versionTag));
   headers.set("X-Webappsec-Worker-Version", safeMetadata(versionId));
-  if (noindex) headers.set("X-Robots-Tag", "noindex, nofollow");
+  if (noindex) headers.set("X-Robots-Tag", "noindex");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

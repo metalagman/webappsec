@@ -83,7 +83,7 @@ test("verifier enforces the selected Worker version and preview noindex headers"
       "Strict-Transport-Security": "max-age=31536000",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
-      "X-Robots-Tag": "noindex, nofollow",
+      "X-Robots-Tag": "noindex",
       "X-Webappsec-Release": fixture.digest,
       "X-Webappsec-Worker-Version": versionId,
     },

@@ -98,7 +98,7 @@ test("HTML, errors, Version URLs, HTTPS, and unknown hosts follow fail-closed po
     const { env } = environment("version");
     const response = await worker.fetch(new Request("https://4f117518-webappsec.demo-account.workers.dev/"), env);
     assert.equal(response.status, 200);
-    assert.equal(response.headers.get("X-Robots-Tag"), "noindex, nofollow");
+    assert.equal(response.headers.get("X-Robots-Tag"), "noindex");
     assert.equal(response.headers.get("Strict-Transport-Security"), "max-age=31536000");
   });
 
@@ -115,7 +115,7 @@ test("HTML, errors, Version URLs, HTTPS, and unknown hosts follow fail-closed po
     const { env, calls } = environment("unused");
     const response = await worker.fetch(new Request("https://attacker.example/"), env);
     assert.equal(response.status, 421);
-    assert.equal(response.headers.get("X-Robots-Tag"), "noindex, nofollow");
+    assert.equal(response.headers.get("X-Robots-Tag"), "noindex");
     assert.equal(calls.length, 0);
   });
 });

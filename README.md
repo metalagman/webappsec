@@ -20,7 +20,7 @@ npm run deploy:validate
 
 `wrangler.jsonc` описывает единственный Worker `webappsec`, Static Assets из `dist`, обязательный Worker-first wrapper, публичные Version URLs и Custom Domain `webappsec.metalagman.dev`. Custom Domain создаёт нужные DNS и TLS записи средствами Cloudflare Workers, поэтому Terraform и изменения в `home-lab` не требуются.
 
-Worker отдаёт body, полученный от Static Assets binding, без преобразования. Он добавляет security headers, разделяет cache policy для content-hashed ресурсов и HTML, отклоняет неизвестные Host и перенаправляет разрешённый HTTP URL на HTTPS. На Version URLs добавляется `X-Robots-Tag: noindex, nofollow`. Заголовки `X-Webappsec-Release` и `X-Webappsec-Worker-Version` берутся из Cloudflare Version Metadata; release workflow передаёт digest manifest как version tag. До promotion Cloudflare отдаёт tag как `unknown` на Version URL, поэтому preview gate связывает точные байты с version ID, а production gate после promotion требует manifest digest.
+Worker отдаёт body, полученный от Static Assets binding, без преобразования. Он добавляет security headers, разделяет cache policy для content-hashed ресурсов и HTML, отклоняет неизвестные Host и перенаправляет разрешённый HTTP URL на HTTPS. На Version URLs Cloudflare фиксирует `X-Robots-Tag: noindex`. Заголовки `X-Webappsec-Release` и `X-Webappsec-Worker-Version` берутся из Cloudflare Version Metadata; release workflow передаёт digest manifest как version tag. До promotion Cloudflare отдаёт tag как `unknown` на Version URL, поэтому preview gate связывает точные байты с version ID, а production gate после promotion требует manifest digest.
 
 Production job использует GitHub Environment `production` и два Environment secrets:
 
@@ -75,10 +75,10 @@ Vulnerability report всегда содержит pinned-версию Grype, в
 Verifier запускается из доверенного checkout, а не со страницы сайта:
 
 ```sh
-git checkout v0.2.3
+git checkout v0.2.4
 npm ci
 npm run tools:signing
-npm run verify:release -- --release v0.2.3 --rebuild
+npm run verify:release -- --release v0.2.4 --rebuild
 ```
 
 Команда принимает только явный SemVer tag, скачивает соответствующий GitHub Release и проверяет Cosign bundles с точным GitHub OIDC issuer, repository, workflow path и tag ref. Затем она проверяет signed evidence index, SLSA/CycloneDX in-toto subjects, SPDX/CycloneDX content и завершённые vulnerability reports, воспроизводит manifest/tar из чистого tag checkout и только после этого проверяет production.
