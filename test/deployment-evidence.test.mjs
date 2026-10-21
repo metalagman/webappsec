@@ -175,7 +175,9 @@ test("deployment workflows are tag-bound, environment-protected, and promote an 
   assert.ok(deployScript.indexOf("verify-production.mjs") < deployScript.indexOf("versions deploy"));
   assert.match(deployScript, /--version-id "\$version_id" --percentage 100/);
   assert.match(deployScript, /WRANGLER_OUTPUT_FILE_PATH/);
+  assert.match(deployScript, /verify-production-retry\.sh/);
   assert.match(rollbackScript, /deployment-evidence\.mjs verify/);
   assert.match(rollbackScript, /versions deploy --config "\$config" --version-id "\$version_id" --percentage 100/);
+  assert.match(rollbackScript, /verify-production-retry\.sh/);
   assert.doesNotMatch(rollbackScript, /wrangler rollback/);
 });

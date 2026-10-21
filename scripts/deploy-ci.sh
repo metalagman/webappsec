@@ -43,9 +43,16 @@ else
   version_id=$(jq -ers 'map(select(.type == "version-upload")) | last.version_id' "$WRANGLER_OUTPUT_FILE_PATH")
   preview_url=$(jq -ers 'map(select(.type == "version-upload")) | last.preview_url' "$WRANGLER_OUTPUT_FILE_PATH")
   [[ $preview_url == https://*-webappsec.*.workers.dev ]]
+  set +e
   node scripts/verify-production.mjs --manifest .artifacts/deploy-workspace/manifest.json \
     --origin "$preview_url" --expected-release "$manifest_digest" --expected-version "$version_id" --noindex true --json \
     > .artifacts/preview-report.json
+  preview_code=$?
+  set -e
+  if [[ $preview_code != 0 ]]; then
+    cat .artifacts/preview-report.json >&2
+    exit "$preview_code"
+  fi
   node scripts/verify-live-browser.mjs --origin "$preview_url" > .artifacts/preview-browser.json
   preview_report=$(cat .artifacts/preview-report.json)
   preview_browser=$(cat .artifacts/preview-browser.json)
@@ -59,9 +66,8 @@ npx wrangler deployments status --config "$config" --json > .artifacts/deploymen
 deployment_id=$(jq -er --arg version "$version_id" 'select(any(.versions[]; .version_id == $version and .percentage == 100)) | .id' .artifacts/deployment-status.json)
 [[ $deployment_id =~ ^[a-f0-9-]{36}$ ]]
 
-node scripts/verify-production.mjs --manifest .artifacts/deploy-workspace/manifest.json \
-  --expected-release "$manifest_digest" --expected-version "$version_id" --noindex false --json \
-  > .artifacts/production-report-base.json
+scripts/verify-production-retry.sh .artifacts/deploy-workspace/manifest.json \
+  "$manifest_digest" "$version_id" .artifacts/production-report-base.json
 node scripts/verify-live-browser.mjs --origin https://webappsec.metalagman.dev > .artifacts/production-browser.json
 production_browser=$(cat .artifacts/production-browser.json)
 jq -c --argjson previewReport "$preview_report" --argjson previewBrowser "$preview_browser" --argjson productionBrowser "$production_browser" \
