@@ -52,12 +52,13 @@ h1 em { color: var(--green); font-weight: 400; }
 .identity dl div { min-width: 0; padding: 1rem; border-right: 1px solid var(--line); }.identity dl div:last-child { border: 0; }
 dt { color: var(--muted); font: .7rem var(--mono); text-transform: uppercase; } dd { margin: .45rem 0 0; overflow-wrap: anywhere; }
 .check-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
-.check-group { padding: 1.5rem; border: 1px solid var(--line); background: rgb(11 23 20 / 85%); }
+.check-group { min-width: 0; padding: 1.5rem; border: 1px solid var(--line); background: rgb(11 23 20 / 85%); }
 .check-group > p { min-height: 4.7em; color: var(--muted); }
 .group-head { display: flex; gap: 1rem; align-items: center; }.group-head > span { color: var(--green); font: 700 .9rem var(--mono); }
 .checks { margin: 1.4rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .checks li { display: grid; grid-template-columns: auto 1fr auto; gap: .8rem; align-items: start; padding: .85rem 0; border-bottom: 1px solid var(--line); }
-.checks b, .checks small { display: block; }.checks small { margin-top: .2rem; color: var(--muted); }.checks strong { color: var(--muted); font: 700 .68rem var(--mono); text-transform: uppercase; }
+.checks li > div { min-width: 0; }
+.checks b, .checks small { display: block; }.checks small { margin-top: .2rem; color: var(--muted); overflow-wrap: anywhere; }.checks strong { color: var(--muted); font: 700 .68rem var(--mono); text-transform: uppercase; }
 .dot { width: .65rem; height: .65rem; margin-top: .35rem; border: 1px solid var(--muted); border-radius: 50%; }
 [data-state="running"] .dot { border-color: var(--amber); background: var(--amber); animation: pulse 1.3s infinite; }
 [data-state="pass"] .dot { border-color: var(--green); background: var(--green); }[data-state="pass"] [data-check-state] { color: var(--green); }
