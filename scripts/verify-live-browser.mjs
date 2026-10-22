@@ -28,6 +28,19 @@ try {
   if ((await page.title()).trim().length === 0) throw new Error("page has no title");
   const resources = await page.locator("script[src][integrity], link[rel~='stylesheet'][href][integrity]").count();
   if (resources < 2) throw new Error("browser found fewer than two SRI-protected resources");
+  const toggle = page.getByRole("button", { name: /CVE correlation/ });
+  const panel = page.locator("#layer-cve");
+  if (await toggle.getAttribute("aria-expanded") !== "false" || await panel.isVisible()) {
+    throw new Error("accordion did not initialize with the second panel collapsed");
+  }
+  await toggle.locator(".toggle-icon").click();
+  if (await toggle.getAttribute("aria-expanded") !== "true" || !(await panel.isVisible())) {
+    throw new Error("accordion did not open from the plus control");
+  }
+  await toggle.click();
+  if (await toggle.getAttribute("aria-expanded") !== "false" || await panel.isVisible()) {
+    throw new Error("accordion did not close from the minus control");
+  }
   if (failures.length) throw new Error(failures.join("; "));
   process.stdout.write(`${JSON.stringify({ ok: true, origin, title: await page.title(), sriResources: resources })}\n`);
 } finally {

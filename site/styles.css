@@ -119,6 +119,7 @@ h2 { font-size: clamp(2rem, 4vw, 4rem); line-height: 1; letter-spacing: -.045em;
 .layer-toggle small, .layer-index { color: var(--dim); font: .68rem var(--mono); }
 .toggle-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); font: 1rem var(--mono); }
 .layer-body { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; padding: .5rem 3rem 2rem 5rem; }
+.layer-body[hidden] { display: none; }
 .layer-body b { color: var(--cyan); font: .68rem var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 .layer-body p { margin: .6rem 0 0; color: var(--muted); }
 

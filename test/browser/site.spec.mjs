@@ -76,11 +76,17 @@ test("valid release loads with local resources and usable interactions", async (
   await expect(page).toHaveURL(`${origin}/#content`);
 
   const cveToggle = page.getByRole("button", { name: /CVE correlation/ });
+  await expect(cveToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#layer-cve")).toBeHidden();
   await cveToggle.focus();
   await expect(cveToggle).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(cveToggle).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#layer-cve")).toBeVisible();
+
+  await cveToggle.locator(".toggle-icon").click();
+  await expect(cveToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#layer-cve")).toBeHidden();
 
   const copy = page.locator(".copy-command");
   await copy.focus();
