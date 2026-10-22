@@ -124,6 +124,7 @@ h2 { font-size: clamp(2rem, 4vw, 4rem); line-height: 1; letter-spacing: -.045em;
 
 .verify-section { display: grid; grid-template-columns: .9fr 1.1fr; gap: 6vw; padding: 7rem 0; align-items: center; }
 .verify-copy p { max-width: 520px; color: var(--muted); }
+.verify-actions { margin-top: 1.5rem; }
 .terminal { overflow: hidden; border: 1px solid #344b44; background: #050b09; box-shadow: 0 28px 70px rgba(0,0,0,.3); }
 .terminal-bar { display: flex; align-items: center; gap: .45rem; padding: .75rem 1rem; border-bottom: 1px solid var(--line); }
 .terminal-bar span { width: 8px; aspect-ratio: 1; border-radius: 50%; background: var(--dim); }

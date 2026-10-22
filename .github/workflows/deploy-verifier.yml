@@ -1,0 +1,131 @@
+name: Deploy online verifier
+
+# This privileged workflow only accepts a successful verification run from trusted main.
+on:
+  workflow_run:
+    workflows: ["Verify production"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-webappsec-verifier
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: >-
+      github.repository == 'metalagman/webappsec' &&
+      github.event.workflow_run.repository.full_name == 'metalagman/webappsec' &&
+      github.event.workflow_run.name == 'Verify production' &&
+      github.event.workflow_run.path == '.github/workflows/verify-production.yml' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.event == 'workflow_dispatch' || github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      UPSTREAM_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Check out exact verified revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Bind validation to the upstream run
+        run: |
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$UPSTREAM_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$UPSTREAM_HEAD_SHA" ]]
+      - name: Install locked dependencies and signer
+        run: npm ci --ignore-scripts && npm run tools:signing
+      - name: Install browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Run unit, integration, and browser tests
+        run: npm test && npm run test:browser
+      - name: Validate deterministic verifier package
+        run: npm run deploy:verifier:validate
+
+  deploy:
+    needs: validate
+    if: >-
+      github.repository == 'metalagman/webappsec' &&
+      github.event.workflow_run.repository.full_name == 'metalagman/webappsec' &&
+      github.event.workflow_run.name == 'Verify production' &&
+      github.event.workflow_run.path == '.github/workflows/verify-production.yml' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      (github.event.workflow_run.event == 'workflow_dispatch' || github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    permissions:
+      contents: read
+    env:
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      UPSTREAM_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Check out exact verified revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Install locked deploy tools and browser
+        run: npm ci --ignore-scripts && npm run tools:signing && npx playwright install --with-deps chromium
+      - name: Build deterministic verifier shell
+        run: npm run build:verifier
+      - name: Resolve signed evidence from the exact verification run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p .artifacts/verifier-publication
+          node scripts/resolve-online-verifier.mjs --run "$RUN_ID" \
+            --output .artifacts/verifier-publication --cosign .bin/cosign
+          install -m 0644 .artifacts/verifier-publication/current-verification.json dist-verifier/current-verification.json
+          install -m 0644 .artifacts/verifier-publication/release-manifest.json dist-verifier/release-manifest.json
+      - name: Validate exact publication package
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy:verifier:package:validate
+      - name: Select bootstrap or versioned deployment
+        id: mode
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: echo "mode=$(node scripts/detect-verifier-mode.mjs)" >> "$GITHUB_OUTPUT"
+      - name: Deploy and verify the online verifier
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: scripts/verifier-deploy-ci.sh "${{ steps.mode.outputs.mode }}" "$RUN_ID"
+      - name: Retain verifier deployment diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: online-verifier-${{ env.RUN_ID }}-${{ github.run_id }}
+          path: |
+            .artifacts/verifier-publication/current-verification.json
+            .artifacts/verifier-deploy
+            .artifacts/hosted-verifier-failure.png
+          if-no-files-found: warn
+          retention-days: 90

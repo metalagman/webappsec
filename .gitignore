@@ -9,6 +9,7 @@
 # Local build and test outputs
 node_modules/
 dist/
+dist-verifier/
 .cache/
 test-results/
 playwright-report/

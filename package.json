@@ -8,7 +8,11 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:verifier": "node scripts/build-verifier.mjs",
+    "snapshot:resolve": "node scripts/resolve-online-verifier.mjs",
     "deploy:validate": "npm run build && XDG_CONFIG_HOME=.artifacts/xdg WRANGLER_SEND_METRICS=false wrangler deploy --dry-run --outdir .artifacts/wrangler-dry-run",
+    "deploy:verifier:validate": "npm run build:verifier && XDG_CONFIG_HOME=.artifacts/xdg WRANGLER_SEND_METRICS=false wrangler deploy --dry-run --config wrangler.verifier.jsonc --outdir .artifacts/wrangler-verifier-dry-run",
+    "deploy:verifier:package:validate": "XDG_CONFIG_HOME=.artifacts/xdg WRANGLER_SEND_METRICS=false wrangler deploy --dry-run --config wrangler.verifier.jsonc --outdir .artifacts/wrangler-verifier-package-dry-run",
     "tools:evidence": "tools/install-evidence-tools.sh .bin",
     "evidence:generate": "node scripts/generate-evidence.mjs",
     "evidence:assemble": "node scripts/assemble-release.mjs build",

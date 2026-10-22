@@ -1,6 +1,7 @@
 import { isImmutableAssetPath } from "../lib/content-addressing.mjs";
 
 const productionHost = "webappsec.metalagman.dev";
+const verifierOrigin = "https://verify.webappsec.metalagman.dev";
 const versionHost = /^[a-z0-9][a-z0-9-]*-webappsec\.[a-z0-9][a-z0-9-]*\.workers\.dev$/;
 
 const contentSecurityPolicy = [
@@ -22,8 +23,20 @@ function safeMetadata(value) {
   return typeof value === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(value) ? value : "unknown";
 }
 
-function addHeaders(response, { versionId, versionTag, noindex, secure }) {
+function addVary(headers, value) {
+  const values = (headers.get("Vary") ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!values.some((item) => item.toLowerCase() === value.toLowerCase())) values.push(value);
+  headers.set("Vary", values.join(", "));
+}
+
+function addHeaders(request, response, { versionId, versionTag, noindex, secure }) {
   const headers = new Headers(response.headers);
+  headers.delete("Access-Control-Allow-Credentials");
+  headers.delete("Access-Control-Allow-Origin");
+  headers.delete("Access-Control-Expose-Headers");
   headers.set("Content-Security-Policy", contentSecurityPolicy);
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("Permissions-Policy", "camera=(), geolocation=(), microphone=()");
@@ -33,6 +46,17 @@ function addHeaders(response, { versionId, versionTag, noindex, secure }) {
   headers.set("X-Frame-Options", "DENY");
   headers.set("X-Webappsec-Release", safeMetadata(versionTag));
   headers.set("X-Webappsec-Worker-Version", safeMetadata(versionId));
+  addVary(headers, "Origin");
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    request.headers.get("Origin") === verifierOrigin
+  ) {
+    headers.set("Access-Control-Allow-Origin", verifierOrigin);
+    headers.set(
+      "Access-Control-Expose-Headers",
+      "X-Webappsec-Release, X-Webappsec-Worker-Version",
+    );
+  }
   if (noindex) headers.set("X-Robots-Tag", "noindex");
   return new Response(response.body, {
     status: response.status,
@@ -54,7 +78,7 @@ export default {
     const metadata = env.CF_VERSION_METADATA ?? {};
 
     if (url.hostname !== productionHost && !versionRequest) {
-      return addHeaders(new Response("Misdirected Request\n", { status: 421 }), {
+      return addHeaders(request, new Response("Misdirected Request\n", { status: 421 }), {
         versionId: metadata.id,
         versionTag: metadata.tag,
         noindex: true,
@@ -64,7 +88,7 @@ export default {
 
     if (url.protocol !== "https:") {
       url.protocol = "https:";
-      return addHeaders(Response.redirect(url, 308), {
+      return addHeaders(request, Response.redirect(url, 308), {
         versionId: metadata.id,
         versionTag: metadata.tag,
         noindex: versionRequest,
@@ -73,7 +97,7 @@ export default {
     }
 
     const assetResponse = await env.ASSETS.fetch(request);
-    const response = addHeaders(assetResponse, {
+    const response = addHeaders(request, assetResponse, {
       versionId: metadata.id,
       versionTag: metadata.tag,
       noindex: versionRequest,

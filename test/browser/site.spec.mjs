@@ -110,7 +110,11 @@ test("mobile and reduced-motion layouts remain usable", async ({ page }) => {
   await page.goto(origin);
 
   await expect(page.getByRole("heading", { name: /От коммита до байтов/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Проверить deployment" })).toBeVisible();
+  const verifierLink = page
+    .getByRole("link", { name: "Проверить текущий deployment онлайн" })
+    .first();
+  await expect(verifierLink).toBeVisible();
+  await expect(verifierLink).toHaveAttribute("href", "https://verify.webappsec.metalagman.dev");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(await page.locator("html").evaluate((element) => getComputedStyle(element).scrollBehavior)).toBe("smooth");
   await page.emulateMedia({ reducedMotion: "reduce" });

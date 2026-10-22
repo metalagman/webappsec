@@ -1,6 +1,6 @@
 # Proof of Deploy
 
-`webappsec.metalagman.dev` — открытая демонстрация проверяемой цепочки поставки веб-сайта: исходный код → CI-сборка → подписанный артефакт → deployment → production-байты.
+[`webappsec.metalagman.dev`](https://webappsec.metalagman.dev) — открытая демонстрация проверяемой цепочки поставки веб-сайта: исходный код → CI-сборка → подписанный артефакт → deployment → production-байты.
 
 Сайт объясняет роль SBOM, CVE-сопоставления, SLSA provenance, reproducible build, Sigstore/Cosign, подписанного deployment manifest, внешнего verifier и browser SRI. Исходный код, конфигурация Cloudflare Worker и GitHub Actions публикуются в этом репозитории.
 
@@ -12,9 +12,16 @@
 npm ci
 npm run check
 npm run deploy:validate
+npm run deploy:verifier:validate
 ```
 
 `npm run deploy:validate` собирает сайт и выполняет локальный `wrangler deploy --dry-run`; сеть и Cloudflare credentials для этого не нужны.
+
+## Онлайн-проверка текущего deployment
+
+[`verify.webappsec.metalagman.dev`](https://verify.webappsec.metalagman.dev) автоматически проверяет release, который сейчас обслуживает основной сайт. Trusted GitHub Actions заранее проверяет Cosign signatures, attestations, SBOM/CVE evidence и воспроизводимую сборку. При каждом открытии verifier браузер отдельно скачивает production-файлы, сверяет их SHA-256 с подписанным manifest, проверяет SRI скриптов и стилей и убеждается, что Worker version не изменился во время проверки.
+
+Snapshot для verifier создаётся только после успешного [Verify production](https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml). Привилегированный workflow повторно проверяет immutable release/deployment/verification evidence, собирает отдельный Worker `webappsec-verifier`, проверяет Version URL до promotion и запускает hosted Chromium после публикации. Production разрешает credentialless CORS только точному origin verifier для GET/HEAD и раскрывает только заголовки identity. Секреты остаются в GitHub Environment `production`; статические файлы verifier их не содержат.
 
 ## Cloudflare deployment contract
 

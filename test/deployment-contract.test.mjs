@@ -80,6 +80,82 @@ test("Worker delegates exact bytes and adds release, cache, and security headers
   assert.equal(response.headers.get("X-Robots-Tag"), null);
 });
 
+test("production responses grant narrow read-only CORS access to the online verifier", async (t) => {
+  const verifierOrigin = "https://verify.webappsec.metalagman.dev";
+
+  for (const method of ["GET", "HEAD"]) {
+    await t.test(`${method} exposes only deployment identity to the verifier`, async () => {
+      const { env } = environment("production", {
+        headers: {
+          Vary: "Accept-Encoding",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "*",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+      const response = await worker.fetch(
+        new Request("https://webappsec.metalagman.dev/", {
+          method,
+          headers: { Origin: verifierOrigin },
+        }),
+        env,
+      );
+
+      assert.equal(response.headers.get("Access-Control-Allow-Origin"), verifierOrigin);
+      assert.equal(
+        response.headers.get("Access-Control-Expose-Headers"),
+        "X-Webappsec-Release, X-Webappsec-Worker-Version",
+      );
+      assert.equal(response.headers.get("Access-Control-Allow-Credentials"), null);
+      assert.deepEqual(
+        response.headers.get("Vary").split(",").map((value) => value.trim()),
+        ["Accept-Encoding", "Origin"],
+      );
+    });
+  }
+
+  for (const [name, request] of [
+    ["missing Origin", new Request("https://webappsec.metalagman.dev/")],
+    [
+      "foreign Origin",
+      new Request("https://webappsec.metalagman.dev/", {
+        headers: { Origin: "https://attacker.example" },
+      }),
+    ],
+    [
+      "POST",
+      new Request("https://webappsec.metalagman.dev/", {
+        method: "POST",
+        headers: { Origin: verifierOrigin },
+      }),
+    ],
+    [
+      "OPTIONS",
+      new Request("https://webappsec.metalagman.dev/", {
+        method: "OPTIONS",
+        headers: { Origin: verifierOrigin },
+      }),
+    ],
+  ]) {
+    await t.test(`${name} receives no cross-origin grant`, async () => {
+      const { env } = environment("production", {
+        headers: {
+          Vary: "Origin",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "*",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+      const response = await worker.fetch(request, env);
+
+      assert.equal(response.headers.get("Access-Control-Allow-Origin"), null);
+      assert.equal(response.headers.get("Access-Control-Expose-Headers"), null);
+      assert.equal(response.headers.get("Access-Control-Allow-Credentials"), null);
+      assert.deepEqual(response.headers.get("Vary"), "Origin");
+    });
+  }
+});
+
 test("HTML, errors, Version URLs, HTTPS, and unknown hosts follow fail-closed policy", async (t) => {
   await t.test("HTML is revalidated", async () => {
     const { env } = environment("<!doctype html>", { headers: { "Content-Type": "text/html" } });

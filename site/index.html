@@ -27,7 +27,7 @@
       <nav aria-label="Основная навигация">
         <a href="#chain">Цепочка</a>
         <a href="#layers">Слои</a>
-        <a href="#verify">Проверить</a>
+        <a href="https://verify.webappsec.metalagman.dev">Online verify ↗</a>
       </nav>
       <a class="repo-link" href="https://github.com/metalagman/webappsec">GitHub ↗</a>
     </header>
@@ -42,7 +42,7 @@
             подписанный артефакт и фактические файлы production — без обещаний, которые нельзя проверить.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="#verify">Проверить deployment</a>
+            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Проверить текущий deployment онлайн</a>
             <a class="button secondary" href="https://github.com/metalagman/webappsec/releases">Открыть evidence</a>
           </div>
         </div>
@@ -174,9 +174,17 @@
           <div class="section-kicker">03 / Независимая проверка</div>
           <h2 id="verify-title">Не верьте этому сайту.<br>Проверьте его.</h2>
           <p>
-            Команда получает evidence из GitHub Release, проверяет Cosign policy и provenance,
-            затем скачивает production-файлы напрямую. Код с проверяемого сайта не исполняется.
+            <strong>Проверено CI:</strong> подписи Cosign, provenance, SBOM, CVE scan и воспроизводимая
+            сборка. <strong>Проверено сейчас в браузере:</strong> identity текущего deployment,
+            SHA-256 всех production-файлов и SHA-384 Subresource Integrity.
           </p>
+          <p>
+            Онлайн-verifier скачивает production-файлы напрямую. Код с проверяемого сайта не исполняется.
+            Для независимой полной проверки подписей и сборки используйте локальную команду справа.
+          </p>
+          <div class="verify-actions">
+            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Проверить текущий deployment онлайн</a>
+          </div>
         </div>
         <div class="terminal" aria-label="Команда запуска verifier">
           <div class="terminal-bar"><span></span><span></span><span></span><b>shell</b></div>

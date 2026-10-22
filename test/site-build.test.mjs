@@ -81,6 +81,11 @@ test("page explains every evidence layer and its limits", async () => {
   }
 
   assert.match(html, /https:\/\/github\.com\/metalagman\/webappsec/);
+  assert.match(html, /href="https:\/\/verify\.webappsec\.metalagman\.dev"/);
+  assert.match(html, /Проверить текущий deployment онлайн/);
+  assert.match(html, /Проверено CI/);
+  assert.match(html, /Проверено сейчас в браузере/);
+  assert.match(html, /SHA-256/);
   assert.match(html, /npm run verify:release -- --release/);
   assert.doesNotMatch(html, /https?:\/\/(?:fonts|cdn|unpkg|jsdelivr)\./);
   assert.match(html, /Content-Security-Policy/);
