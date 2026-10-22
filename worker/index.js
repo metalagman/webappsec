@@ -96,7 +96,10 @@ export default {
       });
     }
 
-    const assetResponse = await env.ASSETS.fetch(request);
+    const assetRequest = url.pathname === "/"
+      ? new Request(new URL("/index.html", url), request)
+      : request;
+    const assetResponse = await env.ASSETS.fetch(assetRequest);
     const response = addHeaders(request, assetResponse, {
       versionId: metadata.id,
       versionTag: metadata.tag,

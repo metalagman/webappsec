@@ -43,6 +43,7 @@ test("Wrangler declares one pinned public Worker and immutable routing contract"
     directory: "./dist",
     binding: "ASSETS",
     run_worker_first: true,
+    html_handling: "none",
     not_found_handling: "404-page",
   });
   assert.deepEqual(config.version_metadata, { binding: "CF_VERSION_METADATA" });
@@ -51,6 +52,21 @@ test("Wrangler declares one pinned public Worker and immutable routing contract"
 
   const packageManifest = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   assert.equal(packageManifest.devDependencies.wrangler, "4.151.3");
+});
+
+test("Worker serves root explicitly while preserving exact signed HTML paths", async () => {
+  const { env, calls } = environment("html", { headers: { "Content-Type": "text/html" } });
+  const rootRequest = new Request("https://webappsec.metalagman.dev/", {
+    headers: { Origin: "https://verify.webappsec.metalagman.dev" },
+  });
+  await worker.fetch(rootRequest, env);
+  assert.equal(new URL(calls[0].url).pathname, "/index.html");
+  assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].headers.get("Origin"), "https://verify.webappsec.metalagman.dev");
+
+  const notFoundPage = new Request("https://webappsec.metalagman.dev/404.html");
+  await worker.fetch(notFoundPage, env);
+  assert.equal(calls[1], notFoundPage);
 });
 
 test("Worker delegates exact bytes and adds release, cache, and security headers", async () => {

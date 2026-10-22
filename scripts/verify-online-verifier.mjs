@@ -22,7 +22,16 @@ page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
 page.on("requestfailed", (request) => errors.push(`request: ${request.url()} ${request.failure()?.errorText ?? "failed"}`));
 
 async function requireVerified() {
-  await page.getByRole("heading", { name: "Deployment подтверждён" }).waitFor({ timeout: 90_000 });
+  await page.waitForFunction(
+    () => document.querySelector("#result")?.getAttribute("aria-busy") === "false",
+    undefined,
+    { timeout: 60_000 },
+  );
+  const title = await page.locator("[data-result-title]").textContent();
+  if (title !== "Deployment подтверждён") {
+    const diagnostics = await page.locator("[data-diagnostics]").textContent();
+    throw new Error(`online verifier returned ${title}: ${diagnostics}`);
+  }
   const checks = page.locator("[data-check-id]");
   if (await checks.count() !== 19) throw new Error("online verifier check inventory mismatch");
   if (await checks.locator(':not([data-state="pass"])').count() !== 0) throw new Error("online verifier contains non-PASS checks");
