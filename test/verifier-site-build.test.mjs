@@ -46,6 +46,7 @@ test("verifier build is deterministic, content-addressed, and protected by local
   assert.doesNotMatch(firstTree.get(app).toString("utf8"), /from "\.\/browser-verifier/);
   assert.match(html, /connect-src 'self' https:\/\/webappsec\.metalagman\.dev/);
   assert.doesNotMatch(html, /frame-ancestors/);
+  assert.match(html, /href="https:\/\/github\.com\/metalagman\/webappsec\/actions\/workflows\/deploy-verifier\.yml"[^>]*>Deploy workflow/);
   assert.doesNotMatch(html, /https?:\/\/(?:fonts|cdn|unpkg|jsdelivr)\./);
 });
 
