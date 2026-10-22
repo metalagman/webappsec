@@ -34,7 +34,11 @@ async function requireVerified() {
   }
   const checks = page.locator("[data-check-id]");
   if (await checks.count() !== 19) throw new Error("online verifier check inventory mismatch");
-  if (await checks.locator(':not([data-state="pass"])').count() !== 0) throw new Error("online verifier contains non-PASS checks");
+  const failedChecks = page.locator('[data-check-id]:not([data-state="pass"])');
+  if (await failedChecks.count() !== 0) {
+    const ids = await failedChecks.evaluateAll((nodes) => nodes.map((node) => node.dataset.checkId));
+    throw new Error(`online verifier contains non-PASS checks: ${ids.join(", ")}`);
+  }
   if (await page.locator('[aria-busy="true"]').count() !== 0) throw new Error("online verifier remained busy");
   if (await page.locator('[data-evidence-links] a:visible').count() !== 4) throw new Error("evidence link inventory mismatch");
 }
