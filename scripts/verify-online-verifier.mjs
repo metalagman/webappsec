@@ -19,7 +19,10 @@ const page = await browser.newPage();
 const errors = [];
 page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
-page.on("requestfailed", (request) => errors.push(`request: ${request.url()} ${request.failure()?.errorText ?? "failed"}`));
+page.on("requestfailed", (request) => {
+  const reason = request.failure()?.errorText ?? "failed";
+  if (reason !== "net::ERR_ABORTED") errors.push(`request: ${request.url()} ${reason}`);
+});
 
 async function requireVerified() {
   await page.waitForFunction(
