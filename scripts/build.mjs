@@ -24,25 +24,52 @@ export async function buildSite({
 } = {}) {
   const sourceMetadata = await lstat(sourceDirectory);
   if (sourceMetadata.isSymbolicLink() || !sourceMetadata.isDirectory()) throw new Error("site source must be a regular directory");
-  const sourceFiles = ["index.html", "404.html", "styles.css", "app.js"];
+  const sourceFiles = ["index.html", "404.html", "styles.css", "app.js", "interactions.js"];
   for (const name of sourceFiles) {
     const metadata = await lstat(path.join(sourceDirectory, name));
     if (metadata.isSymbolicLink() || !metadata.isFile()) throw new Error(`site source must be a regular file: ${name}`);
     if (metadata.size > 5 * 1024 * 1024) throw new Error(`site source exceeds size limit: ${name}`);
   }
-  const [template, notFoundTemplate, styleBytes, scriptBytes] = await Promise.all([
+  const [template, notFoundTemplate, styleBytes, scriptTemplate, interactionsBytes] = await Promise.all([
     readFile(path.join(sourceDirectory, "index.html"), "utf8"),
     readFile(path.join(sourceDirectory, "404.html"), "utf8"),
     readFile(path.join(sourceDirectory, "styles.css")),
-    readFile(path.join(sourceDirectory, "app.js")),
+    readFile(path.join(sourceDirectory, "app.js"), "utf8"),
+    readFile(path.join(sourceDirectory, "interactions.js")),
   ]);
 
   const styleName = contentHashName("site", digest("sha256", styleBytes), "css");
+  const interactionsName = contentHashName("interactions", digest("sha256", interactionsBytes), "js");
+  const scriptBytes = Buffer.from(replaceExactlyOnce(
+    scriptTemplate,
+    "{{INTERACTIONS_MODULE}}",
+    `/app/${interactionsName}`,
+  ));
   const scriptName = contentHashName("app", digest("sha256", scriptBytes), "js");
   const styleIntegrity = `sha384-${digest("sha384", styleBytes, "base64")}`;
   const scriptIntegrity = `sha384-${digest("sha384", scriptBytes, "base64")}`;
+  const interactionsIntegrity = `sha384-${digest("sha384", interactionsBytes, "base64")}`;
+  const importMap = JSON.stringify({
+    integrity: Object.fromEntries([
+      [`/app/${scriptName}`, scriptIntegrity],
+      [`/app/${interactionsName}`, interactionsIntegrity],
+    ].sort(([left], [right]) => left.localeCompare(right, "en"))),
+  });
+  const importMapIntegrity = `sha384-${digest("sha384", Buffer.from(importMap), "base64")}`;
+  const documentCsp = [
+    "default-src 'none'",
+    `script-src 'self' '${importMapIntegrity}'`,
+    "style-src 'self'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+  ].join("; ");
+  const responseCsp = `${documentCsp}; frame-ancestors 'none'`;
 
-  let html = replaceExactlyOnce(template, "{{STYLE_HREF}}", `/app/${styleName}`);
+  let html = replaceExactlyOnce(template, "{{DOCUMENT_CSP}}", documentCsp);
+  html = replaceExactlyOnce(html, "{{IMPORT_MAP}}", importMap);
+  html = replaceExactlyOnce(html, "{{STYLE_HREF}}", `/app/${styleName}`);
   html = replaceExactlyOnce(html, "{{STYLE_INTEGRITY}}", styleIntegrity);
   html = replaceExactlyOnce(html, "{{SCRIPT_SRC}}", `/app/${scriptName}`);
   html = replaceExactlyOnce(html, "{{SCRIPT_INTEGRITY}}", scriptIntegrity);
@@ -61,11 +88,20 @@ export async function buildSite({
     writeFile(path.join(outputDirectory, "404.html"), notFound),
     writeFile(path.join(outputDirectory, "app", styleName), styleBytes),
     writeFile(path.join(outputDirectory, "app", scriptName), scriptBytes),
+    writeFile(path.join(outputDirectory, "app", interactionsName), interactionsBytes),
+    writeFile(path.join(outputDirectory, "security-policy.txt"), responseCsp),
   ]);
 
   return {
     outputDirectory,
-    files: ["404.html", `app/${scriptName}`, `app/${styleName}`, "index.html"],
+    files: [
+      "404.html",
+      `app/${scriptName}`,
+      `app/${interactionsName}`,
+      `app/${styleName}`,
+      "index.html",
+      "security-policy.txt",
+    ],
   };
 }
 

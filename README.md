@@ -2,7 +2,7 @@
 
 [`webappsec.metalagman.dev`](https://webappsec.metalagman.dev) — открытая демонстрация проверяемой цепочки поставки веб-сайта: исходный код → CI-сборка → подписанный артефакт → deployment → production-байты.
 
-Сайт объясняет роль SBOM, CVE-сопоставления, SLSA provenance, reproducible build, Sigstore/Cosign, подписанного deployment manifest, внешнего verifier и browser SRI. Исходный код, конфигурация Cloudflare Worker и GitHub Actions публикуются в этом репозитории.
+Сайт объясняет роль SBOM, CVE-сопоставления, SLSA provenance, reproducible build, Sigstore/Cosign, подписанного deployment manifest, внешнего verifier, browser SRI и `importmap.integrity`. Исходный код, конфигурация Cloudflare Worker и GitHub Actions публикуются в этом репозитории.
 
 ## Локальная проверка
 
@@ -19,7 +19,7 @@ npm run deploy:verifier:validate
 
 ## Онлайн-проверка текущего deployment
 
-[`verify.webappsec.metalagman.dev`](https://verify.webappsec.metalagman.dev) автоматически проверяет release, который сейчас обслуживает основной сайт. Trusted GitHub Actions заранее проверяет Cosign signatures, attestations, SBOM/CVE evidence и воспроизводимую сборку. При каждом открытии verifier браузер отдельно скачивает production-файлы, сверяет их SHA-256 с подписанным manifest, проверяет SRI скриптов и стилей и убеждается, что Worker version не изменился во время проверки.
+[`verify.webappsec.metalagman.dev`](https://verify.webappsec.metalagman.dev) автоматически проверяет release, который сейчас обслуживает основной сайт. Trusted GitHub Actions заранее проверяет Cosign signatures, attestations, SBOM/CVE evidence и воспроизводимую сборку. При каждом открытии verifier браузер отдельно скачивает production-файлы, сверяет их SHA-256 с подписанным manifest, проверяет SRI entry script и stylesheet, полный `importmap.integrity` для всех JS-модулей и убеждается, что Worker version не изменился во время проверки.
 
 Snapshot для verifier создаётся только после успешного [Verify production](https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml). Привилегированный workflow повторно проверяет immutable release/deployment/verification evidence, собирает отдельный Worker `webappsec-verifier`, проверяет Version URL до promotion и запускает hosted Chromium после публикации. Production разрешает credentialless CORS только точному origin verifier для GET/HEAD и раскрывает только заголовки identity. Секреты остаются в GitHub Environment `production`; статические файлы verifier их не содержат.
 
@@ -90,7 +90,7 @@ npm run verify:release -- --release v0.2.7 --rebuild
 
 Команда принимает только явный SemVer tag, скачивает соответствующий GitHub Release и проверяет Cosign bundles с точным GitHub OIDC issuer, repository, workflow path и tag ref. Затем она проверяет signed evidence index, SLSA/CycloneDX in-toto subjects, SPDX/CycloneDX content и завершённые vulnerability reports, воспроизводит manifest/tar из чистого tag checkout и только после этого проверяет production.
 
-Production-слой скачивает каждый URL с `Accept-Encoding: identity`, ограничивает redirects, размер и timeout, отклоняет переход на другой origin и сравнивает точные size/SHA-256. HTML parser сопоставляет browser-loaded script/stylesheet references с manifest и единственным ожидаемым SHA-384 SRI, не исполняя скачанный код. Human и JSON output содержат `pass`, `fail`, `unavailable` или `skipped` для каждого слоя. Низкоуровневая команда `npm run verify -- --manifest ./manifest.json` доступна для локальных HTTP fixtures, но сама по себе не аутентифицирует manifest.
+Production-слой скачивает каждый URL с `Accept-Encoding: identity`, ограничивает redirects, размер и timeout, отклоняет переход на другой origin и сравнивает точные size/SHA-256. HTML parser сопоставляет browser-loaded script/stylesheet references с manifest и ожидаемым SHA-384 SRI, не исполняя скачанный код. Он также требует каноническую import map перед entry-модулем, точный SHA-384 каждого JS-файла из manifest и CSP-хеш самой import map. Полная response CSP хранится как подписанный `security-policy.txt`; Worker применяет её к ответам, а verifier сравнивает заголовок побайтно. Human и JSON output содержат `pass`, `fail`, `unavailable` или `skipped` для каждого слоя. Низкоуровневая команда `npm run verify -- --manifest ./manifest.json` доступна для локальных HTTP fixtures, но сама по себе не аутентифицирует manifest.
 
 Exit code `0` означает, что все обязательные проверки выполнены и прошли; `1` — ошибка подписи, evidence policy или production bytes; `2` — неверный вызов CLI; `3` — обязательный GitHub/Sigstore/production service недоступен. Недоступная проверка никогда не становится pass.
 

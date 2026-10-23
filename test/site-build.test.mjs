@@ -33,12 +33,13 @@ test("build emits deterministic local assets with matching SRI", async () => {
   const firstNames = (await readdir(first)).sort();
   const secondNames = (await readdir(second)).sort();
   assert.deepEqual(firstNames, secondNames);
-  assert.deepEqual(firstNames, ["404.html", "app", "index.html"]);
+  assert.deepEqual(firstNames, ["404.html", "app", "index.html", "security-policy.txt"]);
 
   const appFiles = (await readdir(path.join(first, "app"))).sort();
-  assert.equal(appFiles.length, 2);
-  assert.match(appFiles[0], /^(app\.[a-f0-9]{12}\.js|site\.[a-f0-9]{12}\.css)$/);
-  assert.match(appFiles[1], /^(app\.[a-f0-9]{12}\.js|site\.[a-f0-9]{12}\.css)$/);
+  assert.equal(appFiles.length, 3);
+  assert.equal(appFiles.filter((name) => name.endsWith(".js")).length, 2);
+  assert.equal(appFiles.filter((name) => name.endsWith(".css")).length, 1);
+  for (const name of appFiles) assert.match(name, /^(?:app|interactions|site)\.[a-f0-9]{12}\.(?:js|css)$/);
 
   const firstHTML = await readFile(path.join(first, "index.html"), "utf8");
   const secondHTML = await readFile(path.join(second, "index.html"), "utf8");
@@ -51,11 +52,29 @@ test("build emits deterministic local assets with matching SRI", async () => {
     assert.deepEqual(bytes, secondTree.get(name), `${name} differs between clean builds`);
   }
 
-  for (const assetName of appFiles) {
+  for (const assetName of appFiles.filter((name) => name.endsWith(".css") || name.startsWith("app."))) {
     const bytes = await readFile(path.join(first, "app", assetName));
     assert.match(firstHTML, new RegExp(`(?:src|href)="/app/${assetName}"`));
     assert.match(firstHTML, new RegExp(`integrity="${integrity(bytes).replaceAll("+", "\\+")}"`));
   }
+
+  const importMapMatch = firstHTML.match(/<script type="importmap">([^<]+)<\/script>/);
+  assert.ok(importMapMatch, "inline import map is present");
+  const importMap = JSON.parse(importMapMatch[1]);
+  const javascriptFiles = appFiles.filter((name) => name.endsWith(".js"));
+  assert.deepEqual(Object.keys(importMap), ["integrity"]);
+  assert.deepEqual(Object.keys(importMap.integrity), javascriptFiles.map((name) => `/app/${name}`).sort());
+  for (const assetName of javascriptFiles) {
+    const bytes = await readFile(path.join(first, "app", assetName));
+    assert.equal(importMap.integrity[`/app/${assetName}`], integrity(bytes));
+  }
+  assert.ok(firstHTML.indexOf('type="importmap"') < firstHTML.indexOf('type="module"'));
+
+  const policy = await readFile(path.join(first, "security-policy.txt"), "utf8");
+  const importMapIntegrity = integrity(Buffer.from(importMapMatch[1]));
+  assert.match(policy, new RegExp(`script-src 'self' '${importMapIntegrity.replaceAll("+", "\\+")}'`));
+  assert.match(policy, /frame-ancestors 'none'/);
+  assert.match(firstHTML, new RegExp(`script-src 'self' '${importMapIntegrity.replaceAll("+", "\\+")}'`));
 });
 
 test("page explains every evidence layer and its limits", async () => {

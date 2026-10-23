@@ -66,6 +66,7 @@ test("verifier accepts exact local production bytes and SRI without executing co
   assert.equal(report.ok, true);
   assert.deepEqual(report.layers.map(({ state }) => state), ["pass", "pass", "pass"]);
   assert.equal(identityRequests, fixture.manifest.files.length);
+  assert.match(report.layers[2].detail, /2 import-map modules/);
   assert.match(humanReport(report), /PASS deployment verified/);
 });
 
@@ -76,7 +77,7 @@ test("verifier enforces the selected Worker version and preview noindex headers"
     headers: {
       "Cache-Control": url.pathname.startsWith("/app/") ? "public, max-age=31536000, immutable" : "no-cache",
       "Content-Length": body.length,
-      "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": fixture.bodies.get("/security-policy.txt").toString("utf8"),
       "Cross-Origin-Opener-Policy": "same-origin",
       "Permissions-Policy": "camera=(), geolocation=(), microphone=()",
       "Referrer-Policy": "no-referrer",
@@ -166,11 +167,30 @@ test("verifier fails closed for changed bytes, off-origin redirect, timeout, and
 
   await t.test("wrong SRI with otherwise matching declared bytes", async () => {
     const fixture = await releaseFixture();
-    const manifestPath = await alterHomepage(fixture, (html) => html.replace(/sha384-[A-Za-z0-9+/=]+/, `sha384-${"A".repeat(64)}`), "wrong-sri.json");
+    const manifestPath = await alterHomepage(fixture, (html) => html.replace(/integrity="sha384-[A-Za-z0-9+/=]+"/, `integrity="sha384-${"A".repeat(64)}"`), "wrong-sri.json");
     const report = await verifyProduction({ manifestPath, origin: "http://127.0.0.1:4173", fetchImplementation: fixtureFetch(fixture) });
     assert.equal(report.ok, false);
     assert.equal(report.layers[1].state, "pass");
     assert.match(report.layers[2].detail, /SRI mismatch/);
+  });
+
+  await t.test("missing import map fails even when direct SRI is valid", async () => {
+    const fixture = await releaseFixture();
+    const manifestPath = await alterHomepage(fixture, (html) => html.replace(/\s*<script type="importmap">[^<]+<\/script>/, ""), "missing-import-map.json");
+    const report = await verifyProduction({ manifestPath, origin: "http://127.0.0.1:4173", fetchImplementation: fixtureFetch(fixture) });
+    assert.equal(report.ok, false);
+    assert.match(report.layers[2].detail, /import map/i);
+  });
+
+  await t.test("import map integrity must match every declared JavaScript module", async () => {
+    const fixture = await releaseFixture();
+    const manifestPath = await alterHomepage(fixture, (html) => html.replace(
+      /(<script type="importmap">[^<]*sha384-)[A-Za-z0-9+/=]+/,
+      `$1${"A".repeat(64)}`,
+    ), "wrong-import-map.json");
+    const report = await verifyProduction({ manifestPath, origin: "http://127.0.0.1:4173", fetchImplementation: fixtureFetch(fixture) });
+    assert.equal(report.ok, false);
+    assert.match(report.layers[2].detail, /import map integrity mismatch/i);
   });
 
   await t.test("data-integrity cannot impersonate integrity", async () => {

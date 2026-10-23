@@ -27,7 +27,7 @@
         <p class="eyebrow"><span class="pulse" aria-hidden="true"></span> Live supply-chain verification</p>
         <h1 id="page-title">Проверяем текущий<br><em>production deployment.</em></h1>
         <p class="lead">Страница соединяет подписанный результат доверенного CI с новой проверкой байтов, которые прямо сейчас отдаёт <code>webappsec.metalagman.dev</code>.</p>
-        <p class="trust-note"><strong>Граница доверия:</strong> Cosign и воспроизводимая сборка выполняются доверенным GitHub Actions workflow. Этот браузер независимо проверяет identity, SHA-256 всех файлов и SRI.</p>
+        <p class="trust-note"><strong>Граница доверия:</strong> Cosign и воспроизводимая сборка выполняются доверенным GitHub Actions workflow. Этот браузер независимо проверяет identity, SHA-256 всех файлов, SRI и <code>importmap.integrity</code>.</p>
       </section>
 
       <section class="result-card is-running" id="result" aria-labelledby="result-title" aria-busy="true">
@@ -85,7 +85,7 @@
             <li data-check-id="browser:manifest"><span class="dot"></span><div><b>Release manifest</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
             <li data-check-id="browser:identity"><span class="dot"></span><div><b>Deployment identity</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
             <li data-check-id="browser:production-bytes"><span class="dot"></span><div><b>Все production-файлы</b><small data-check-detail>SHA-256 ещё не вычислен</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:sri"><span class="dot"></span><div><b>Subresource Integrity</b><small data-check-detail>SHA-384 ещё не вычислен</small></div><strong data-check-state>ожидается</strong></li>
+            <li data-check-id="browser:sri"><span class="dot"></span><div><b>SRI + import map integrity</b><small data-check-detail>SHA-384 ещё не вычислен</small></div><strong data-check-state>ожидается</strong></li>
             <li data-check-id="browser:stability"><span class="dot"></span><div><b>Стабильная identity</b><small data-check-detail>Финальная проверка ещё не выполнена</small></div><strong data-check-state>ожидается</strong></li>
           </ol>
         </section>

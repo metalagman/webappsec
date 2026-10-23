@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#07110f">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'"
+      content="{{DOCUMENT_CSP}}"
     >
     <meta
       name="description"
@@ -15,6 +15,7 @@
     >
     <title>Proof of Deploy — проверяемый веб-релиз</title>
     <link rel="stylesheet" href="{{STYLE_HREF}}" integrity="{{STYLE_INTEGRITY}}">
+    <script type="importmap">{{IMPORT_MAP}}</script>
     <script type="module" src="{{SCRIPT_SRC}}" integrity="{{SCRIPT_INTEGRITY}}"></script>
   </head>
   <body>
@@ -159,11 +160,11 @@
 
           <article class="layer">
             <button class="layer-toggle" type="button" aria-expanded="true" aria-controls="layer-sri">
-              <span class="layer-index">08</span><span><strong>Subresource Integrity</strong><small>browser enforcement</small></span><span class="toggle-icon" aria-hidden="true">−</span>
+              <span class="layer-index">08</span><span><strong>SRI + import map integrity</strong><small>browser enforcement</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-sri">
-              <div><b>Что доказывает</b><p>Браузер исполнил подключённый script или stylesheet только при совпадении его SHA-384.</p></div>
-              <div><b>Граница проверки</b><p><strong>SRI не защищает HTML-документ</strong>, который содержит ожидаемый hash. Его проверяет внешний verifier.</p></div>
+              <div><b>Что доказывает</b><p>Обычный SRI проверяет entry script и stylesheet. <code>importmap.integrity</code> задаёт SHA-384 для каждого JS-модуля, включая транзитивный import, а CSP фиксирует хеш самой import map.</p></div>
+              <div><b>Граница проверки</b><p><strong>SRI не защищает HTML-документ</strong>, который содержит ожидаемый hash. Его проверяет внешний verifier. CSS, загруженный через <code>@import</code> или <code>url()</code>, требует отдельного контроля.</p></div>
             </div>
           </article>
         </div>
@@ -176,7 +177,8 @@
           <p>
             <strong>Проверено CI:</strong> подписи Cosign, provenance, SBOM, CVE scan и воспроизводимая
             сборка. <strong>Проверено сейчас в браузере:</strong> identity текущего deployment,
-            SHA-256 всех production-файлов и SHA-384 Subresource Integrity.
+            SHA-256 всех production-файлов, SHA-384 Subresource Integrity и полный
+            <code>importmap.integrity</code> для JavaScript-модулей.
           </p>
           <p>
             Онлайн-verifier скачивает production-файлы напрямую. Код с проверяемого сайта не исполняется.

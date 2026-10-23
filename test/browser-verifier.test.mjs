@@ -94,10 +94,16 @@ function verifierFixture() {
   const html = new TextEncoder().encode("<!doctype html>");
   const script = new TextEncoder().encode("console.log('verified');\n");
   const style = new TextEncoder().encode("body { color: green; }\n");
+  const scriptSri = `sha384-${createHash("sha384").update(script).digest("base64")}`;
+  const importMap = JSON.stringify({ integrity: { "/app/app.abc123.js": scriptSri } });
+  const importMapSri = `sha384-${createHash("sha384").update(importMap).digest("base64")}`;
+  const documentPolicy = `default-src 'none'; script-src 'self' '${importMapSri}'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'`;
+  const policy = new TextEncoder().encode(`${documentPolicy}; frame-ancestors 'none'`);
   const value = manifest([
     file("assets/app/app.abc123.js", "/app/app.abc123.js", "text/javascript; charset=utf-8", script),
     file("assets/app/site.abc123.css", "/app/site.abc123.css", "text/css; charset=utf-8", style),
     file("assets/index.html", "/", "text/html; charset=utf-8", html),
+    file("assets/security-policy.txt", "/security-policy.txt", "application/octet-stream", policy),
   ]);
   const manifestBytes = new TextEncoder().encode(JSON.stringify(value));
   const digest = sha256(manifestBytes);
@@ -105,13 +111,17 @@ function verifierFixture() {
   snap.target.manifestDigest = digest;
   snap.manifest.sha256 = digest;
   snap.manifest.size = manifestBytes.length;
-  const scriptSri = `sha384-${createHash("sha384").update(script).digest("base64")}`;
   const styleSri = `sha384-${createHash("sha384").update(style).digest("base64")}`;
+  const scriptElement = new FixtureElement({ src: "/app/app.abc123.js", integrity: scriptSri, type: "module" });
+  const importMapElement = new FixtureElement({ type: "importmap" }, importMap);
   const DOMParserImplementation = fixtureParser({
-    scripts: [new FixtureElement({ src: "/app/app.abc123.js", integrity: scriptSri })],
+    scripts: [scriptElement],
     styles: [new FixtureElement({ href: "/app/site.abc123.css", integrity: styleSri })],
+    importMaps: [importMapElement],
+    policies: [new FixtureElement({ "http-equiv": "Content-Security-Policy", content: documentPolicy })],
+    scriptOrder: [importMapElement, scriptElement],
   });
-  return { html, script, style, value, manifestBytes, digest, snap, DOMParserImplementation };
+  return { html, script, style, policy, value, manifestBytes, digest, snap, DOMParserImplementation };
 }
 
 test("snapshot validation accepts the exact trusted proof and layer inventory", async () => {
@@ -226,8 +236,12 @@ test("production verification rejects identity drift, tampered bytes, and stream
 });
 
 class FixtureElement {
-  constructor(attributes) { this.attributes = attributes; }
+  constructor(attributes, textContent = "") {
+    this.attributes = attributes;
+    this.textContent = textContent;
+  }
   getAttribute(name) { return this.attributes[name] ?? null; }
+  hasAttribute(name) { return name in this.attributes; }
 }
 
 function fixtureParser(resources) {
@@ -238,6 +252,12 @@ function fixtureParser(resources) {
           if (selector === "script[src]") return resources.scripts;
           if (selector === 'link[rel~="stylesheet"][href]') return resources.styles;
           if (selector === "base[href]") return resources.bases ?? [];
+          if (selector === 'script[type="module"][src]') {
+            return resources.scripts.filter((element) => element.getAttribute("type") === "module");
+          }
+          if (selector === 'script[type="importmap"]') return resources.importMaps ?? [];
+          if (selector === "script") return resources.scriptOrder ?? resources.scripts;
+          if (selector === "meta[http-equiv]") return resources.policies ?? [];
           return [];
         },
       };
@@ -252,19 +272,29 @@ test("SRI verification hashes same-origin scripts and styles without executing t
   const style = new TextEncoder().encode("body { color: green; }\n");
   const scriptSri = `sha384-${createHash("sha384").update(script).digest("base64")}`;
   const styleSri = `sha384-${createHash("sha384").update(style).digest("base64")}`;
+  const importMap = JSON.stringify({ integrity: { "/app/app.abc123.js": scriptSri } });
+  const importMapSri = `sha384-${createHash("sha384").update(importMap).digest("base64")}`;
+  const documentPolicy = `default-src 'none'; script-src 'self' '${importMapSri}'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'`;
+  const policy = new TextEncoder().encode(`${documentPolicy}; frame-ancestors 'none'`);
   const value = manifest([
     file("assets/app/app.abc123.js", "/app/app.abc123.js", "text/javascript; charset=utf-8", script),
     file("assets/app/site.abc123.css", "/app/site.abc123.css", "text/css; charset=utf-8", style),
     file("assets/index.html", "/", "text/html; charset=utf-8", html),
+    file("assets/security-policy.txt", "/security-policy.txt", "application/octet-stream", policy),
   ]);
-  const bodies = new Map([["/", html], ["/app/app.abc123.js", script], ["/app/site.abc123.css", style]]);
+  const bodies = new Map([["/", html], ["/app/app.abc123.js", script], ["/app/site.abc123.css", style], ["/security-policy.txt", policy]]);
+  const scriptElement = new FixtureElement({ src: "/app/app.abc123.js", integrity: scriptSri, type: "module" });
+  const importMapElement = new FixtureElement({ type: "importmap" }, importMap);
   const DOMParserImplementation = fixtureParser({
-    scripts: [new FixtureElement({ src: "/app/app.abc123.js", integrity: scriptSri })],
+    scripts: [scriptElement],
     styles: [new FixtureElement({ href: "/app/site.abc123.css", integrity: styleSri })],
+    importMaps: [importMapElement],
+    policies: [new FixtureElement({ "http-equiv": "Content-Security-Policy", content: documentPolicy })],
+    scriptOrder: [importMapElement, scriptElement],
   });
 
   const result = await verifySriDocuments({ manifest: value, bodies, DOMParserImplementation, cryptoImplementation: webcrypto });
-  assert.deepEqual(result, { scripts: 1, stylesheets: 1, resources: 2 });
+  assert.deepEqual(result, { scripts: 1, stylesheets: 1, resources: 2, importMapModules: 1 });
 });
 
 test("SRI verification rejects missing, cross-origin, and mismatched integrity metadata", async () => {
@@ -303,6 +333,7 @@ test("online verification joins CI proof with fresh bytes, SRI, and stable ident
     ["/", fixture.html],
     ["/app/app.abc123.js", fixture.script],
     ["/app/site.abc123.css", fixture.style],
+    ["/security-policy.txt", fixture.policy],
   ]);
   const fetchImplementation = async (url) => {
     const parsed = new URL(url);
@@ -341,6 +372,7 @@ test("online verification fails closed on final identity drift and classifies ne
     ["/", fixture.html],
     ["/app/app.abc123.js", fixture.script],
     ["/app/site.abc123.css", fixture.style],
+    ["/security-policy.txt", fixture.policy],
   ]);
   let rootRequests = 0;
   const staticResponse = (parsed) => parsed.pathname === "/current-verification.json"

@@ -29,13 +29,27 @@ const file = (pathName, urlPath, mediaType, bytes) => ({
   sha256: sha("sha256", bytes),
 });
 
-function fixture({ sriMismatch = false, stale = false } = {}) {
-  const script = Buffer.from("document.documentElement.dataset.production = 'never-executed';\n");
+function fixture({ importMapMismatch = false, sriMismatch = false, stale = false } = {}) {
+  const script = Buffer.from("import '/app/interactions.abc123.js';\ndocument.documentElement.dataset.production = 'never-executed';\n");
+  const interactions = Buffer.from("export const loaded = true;\n");
   const style = Buffer.from("body { color: #fff; }\n");
   const scriptSri = sriMismatch ? `sha384-${"A".repeat(64)}` : `sha384-${sha("sha384", script, "base64")}`;
+  const importMap = JSON.stringify({ integrity: {
+    "/app/app.abc123.js": importMapMismatch ? `sha384-${"A".repeat(64)}` : `sha384-${sha("sha384", script, "base64")}`,
+    "/app/interactions.abc123.js": `sha384-${sha("sha384", interactions, "base64")}`,
+  } });
+  const importMapSri = `sha384-${sha("sha384", Buffer.from(importMap), "base64")}`;
   const styleSri = `sha384-${sha("sha384", style, "base64")}`;
-  const html = Buffer.from(`<!doctype html><html><head><link rel="stylesheet" href="/app/site.abc123.css" integrity="${styleSri}"><script src="/app/app.abc123.js" integrity="${scriptSri}"></script></head><body>production</body></html>`);
-  const files = new Map([["/", html], ["/app/app.abc123.js", script], ["/app/site.abc123.css", style]]);
+  const documentPolicy = `default-src 'none'; script-src 'self' '${importMapSri}'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'`;
+  const responsePolicy = Buffer.from(`${documentPolicy}; frame-ancestors 'none'`);
+  const html = Buffer.from(`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${documentPolicy}"><link rel="stylesheet" href="/app/site.abc123.css" integrity="${styleSri}"><script type="importmap">${importMap}</script><script type="module" src="/app/app.abc123.js" integrity="${scriptSri}"></script></head><body>production</body></html>`);
+  const files = new Map([
+    ["/", html],
+    ["/app/app.abc123.js", script],
+    ["/app/interactions.abc123.js", interactions],
+    ["/app/site.abc123.css", style],
+    ["/security-policy.txt", responsePolicy],
+  ]);
   const manifest = {
     schema: "https://webappsec.metalagman.dev/schema/deployment-manifest-v1",
     version: 1,
@@ -53,8 +67,10 @@ function fixture({ sriMismatch = false, stale = false } = {}) {
     ],
     files: [
       file("assets/app/app.abc123.js", "/app/app.abc123.js", "text/javascript; charset=utf-8", script),
+      file("assets/app/interactions.abc123.js", "/app/interactions.abc123.js", "text/javascript; charset=utf-8", interactions),
       file("assets/app/site.abc123.css", "/app/site.abc123.css", "text/css; charset=utf-8", style),
       file("assets/index.html", "/", "text/html; charset=utf-8", html),
+      file("assets/security-policy.txt", "/security-policy.txt", "application/octet-stream", responsePolicy),
     ],
   };
   const manifestBytes = Buffer.from(JSON.stringify(manifest));
@@ -95,12 +111,13 @@ function fixture({ sriMismatch = false, stale = false } = {}) {
 async function routeVerifier(page, {
   tamper = false,
   unavailable = false,
+  importMapMismatch = false,
   sriMismatch = false,
   stale = false,
   delayFirstSnapshot = false,
   counter = { snapshots: 0 },
 } = {}) {
-  const data = fixture({ sriMismatch, stale });
+  const data = fixture({ importMapMismatch, sriMismatch, stale });
   let releaseFirstSnapshot;
   const firstSnapshotGate = new Promise((resolve) => { releaseFirstSnapshot = resolve; });
   await page.route(`${verifierOrigin}/**`, async (route) => {
@@ -218,6 +235,14 @@ test("SRI mismatch fails closed and stale evidence is visibly warned", async ({ 
   await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
   await expect(page.locator("[data-stale]")).toBeVisible();
   await expect(page.locator("[data-stale]")).toContainText("старше 36 часов");
+});
+
+test("import map integrity mismatch fails closed", async ({ page }) => {
+  await routeVerifier(page, { importMapMismatch: true });
+  await page.goto(verifierOrigin);
+  await expect(page.getByRole("heading", { name: "Проверка не пройдена" })).toBeVisible();
+  await expect(page.locator('[data-check-id="browser:sri"] [data-check-state]')).toHaveText("ошибка");
+  await expect(page.locator('[data-check-id="browser:sri"] [data-check-detail]')).toContainText("import map integrity mismatch");
 });
 
 test("missing Web Crypto is reported as unavailable without false PASS", async ({ page }) => {

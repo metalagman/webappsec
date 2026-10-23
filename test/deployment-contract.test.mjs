@@ -12,8 +12,18 @@ const root = path.resolve(new URL("..", import.meta.url).pathname);
 const wranglerPath = path.join(root, "wrangler.jsonc");
 const workerPath = path.join(root, "worker/index.js");
 const contentAddressingPath = path.join(root, "lib/content-addressing.mjs");
+const releaseContentSecurityPolicy = [
+  "default-src 'none'",
+  `script-src 'self' 'sha384-${"A".repeat(64)}'`,
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
 
-function environment(body, init = {}) {
+function environment(body, init = {}, policy = releaseContentSecurityPolicy) {
   const calls = [];
   return {
     calls,
@@ -25,6 +35,9 @@ function environment(body, init = {}) {
       ASSETS: {
         async fetch(request) {
           calls.push(request);
+          if (new URL(request.url).pathname === "/security-policy.txt") {
+            return new Response(policy, { status: policy ? 200 : 404 });
+          }
           return new Response(body, init);
         },
       },
@@ -60,13 +73,15 @@ test("Worker serves root explicitly while preserving exact signed HTML paths", a
     headers: { Origin: "https://verify.webappsec.metalagman.dev" },
   });
   await worker.fetch(rootRequest, env);
-  assert.equal(new URL(calls[0].url).pathname, "/index.html");
-  assert.equal(calls[0].method, "GET");
-  assert.equal(calls[0].headers.get("Origin"), "https://verify.webappsec.metalagman.dev");
+  assert.equal(new URL(calls[0].url).pathname, "/security-policy.txt");
+  assert.equal(new URL(calls[1].url).pathname, "/index.html");
+  assert.equal(calls[1].method, "GET");
+  assert.equal(calls[1].headers.get("Origin"), "https://verify.webappsec.metalagman.dev");
 
   const notFoundPage = new Request("https://webappsec.metalagman.dev/404.html");
   await worker.fetch(notFoundPage, env);
-  assert.equal(calls[1], notFoundPage);
+  assert.equal(new URL(calls[2].url).pathname, "/security-policy.txt");
+  assert.equal(calls[3], notFoundPage);
 });
 
 test("Worker delegates exact bytes and adds release, cache, and security headers", async () => {
@@ -83,17 +98,31 @@ test("Worker delegates exact bytes and adds release, cache, and security headers
   const response = await worker.fetch(request, env);
 
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0], request);
+  assert.equal(calls.length, 2);
+  assert.equal(new URL(calls[0].url).pathname, "/security-policy.txt");
+  assert.equal(calls[1], request);
   assert.equal(response.headers.get("ETag"), '"asset"');
   assert.equal(response.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
   assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
   assert.equal(response.headers.get("X-Frame-Options"), "DENY");
   assert.equal(response.headers.get("Strict-Transport-Security"), "max-age=31536000");
-  assert.match(response.headers.get("Content-Security-Policy"), /frame-ancestors 'none'/);
+  assert.equal(response.headers.get("Content-Security-Policy"), releaseContentSecurityPolicy);
   assert.equal(response.headers.get("X-Webappsec-Release"), env.CF_VERSION_METADATA.tag);
   assert.equal(response.headers.get("X-Webappsec-Worker-Version"), env.CF_VERSION_METADATA.id);
   assert.equal(response.headers.get("X-Robots-Tag"), null);
+});
+
+test("Worker fails closed when the signed release CSP is missing or malformed", async (t) => {
+  for (const [name, policy] of [["missing", ""], ["malformed", "default-src *\nX-Evil: yes"]]) {
+    await t.test(name, async () => {
+      const { env, calls } = environment("must not be served", {}, policy);
+      const response = await worker.fetch(new Request("https://webappsec.metalagman.dev/"), env);
+      assert.equal(response.status, 503);
+      assert.equal(await response.text(), "Release policy unavailable\n");
+      assert.equal(calls.length, 1);
+      assert.equal(new URL(calls[0].url).pathname, "/security-policy.txt");
+    });
+  }
 });
 
 test("production responses grant narrow read-only CORS access to the online verifier", async (t) => {
