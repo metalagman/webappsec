@@ -144,8 +144,13 @@ export default {
       return response;
     }
 
-    const assetRequest = url.pathname === "/"
-      ? new Request(new URL("/index.html", url), request)
+    const assetPath = url.pathname === "/"
+      ? "/index.html"
+      : (url.pathname === "/ru" || url.pathname === "/ru/")
+        ? "/ru/index.html"
+        : null;
+    const assetRequest = assetPath
+      ? new Request(new URL(assetPath, url), request)
       : request;
     const assetResponse = await env.ASSETS.fetch(assetRequest);
     const response = addHeaders(request, assetResponse, {

@@ -1,12 +1,62 @@
 import { verifyOnlineDeployment } from "./{{ENGINE_MODULE}}";
 
-const stateLabels = {
-  pending: "ожидается",
-  running: "проверяется",
-  pass: "пройдено",
-  fail: "ошибка",
-  unavailable: "недоступно",
-};
+const locale = document.documentElement.lang.toLowerCase().startsWith("ru") ? "ru" : "en";
+
+const messages = locale === "ru"
+  ? {
+      states: {
+        pending: "ожидается",
+        running: "проверяется",
+        pass: "пройдено",
+        fail: "ошибка",
+        unavailable: "недоступно",
+      },
+      runningTitle: "Проверка выполняется",
+      runningSummary: "Получаем свежий снимок CI и связываем его с текущим deployment.",
+      runningLive: "Проверка запущена.",
+      runningDiagnostics: "Проверка выполняется…",
+      waitingDetail: "Ожидает выполнения",
+      pendingValue: "ожидается",
+      unknownRelease: "не определён",
+      unknownTime: "не определено",
+      passTitle: "Deployment подтверждён",
+      passSummary: "CI-доказательства и свежие production-байты относятся к одной идентичности и прошли все обязательные проверки.",
+      passLive: "Проверка завершена успешно.",
+      unavailableTitle: "Проверка недоступна",
+      unavailableSummary: "Обязательный источник или требуемый API браузера сейчас недоступны. Статус «пройдено» не выставлен.",
+      unavailableLive: "Проверка завершена: результат недоступен.",
+      failTitle: "Проверка не пройдена",
+      failSummary: "На одном из обязательных шагов обнаружено несоответствие. Статус «пройдено» не выставлен.",
+      failLive: "Проверка завершена с ошибкой.",
+      unknownError: "Неизвестная ошибка",
+    }
+  : {
+      states: {
+        pending: "pending",
+        running: "running",
+        pass: "pass",
+        fail: "fail",
+        unavailable: "unavailable",
+      },
+      runningTitle: "Verification in progress",
+      runningSummary: "Fetching the latest CI snapshot and binding it to the live deployment.",
+      runningLive: "Verification started.",
+      runningDiagnostics: "Verification in progress…",
+      waitingDetail: "Queued for current run",
+      pendingValue: "pending",
+      unknownRelease: "unknown",
+      unknownTime: "unknown",
+      passTitle: "Deployment verified",
+      passSummary: "CI evidence and live production bytes match the same release identity and passed every required check.",
+      passLive: "Verification succeeded.",
+      unavailableTitle: "Verification unavailable",
+      unavailableSummary: "A required source or browser API is currently unavailable. PASS was not granted.",
+      unavailableLive: "Verification finished: result unavailable.",
+      failTitle: "Verification failed",
+      failSummary: "A required check detected a mismatch. PASS was not granted.",
+      failLive: "Verification failed.",
+      unknownError: "Unknown error",
+    };
 
 const checkElements = new Map(
   [...document.querySelectorAll("[data-check-id]")].map((element) => [element.dataset.checkId, element]),
@@ -32,7 +82,7 @@ function renderCheck(check) {
   const element = checkElements.get(check.id);
   if (!element) return;
   element.dataset.state = check.state;
-  element.querySelector("[data-check-state]").textContent = stateLabels[check.state] ?? check.state;
+  element.querySelector("[data-check-state]").textContent = messages.states[check.state] ?? check.state;
   element.querySelector("[data-check-detail]").textContent = check.detail;
 }
 
@@ -40,19 +90,19 @@ function resetPage() {
   result.className = "result-card is-running";
   result.setAttribute("aria-busy", "true");
   resultMark.textContent = "···";
-  resultTitle.textContent = "Проверка выполняется";
-  resultSummary.textContent = "Получаем свежий snapshot и связываем его с текущим deployment.";
-  liveSummary.textContent = "Проверка запущена.";
+  resultTitle.textContent = messages.runningTitle;
+  resultSummary.textContent = messages.runningSummary;
+  liveSummary.textContent = messages.runningLive;
   staleWarning.hidden = true;
   evidenceLinks.hidden = true;
-  diagnostics.textContent = "Проверка выполняется…";
+  diagnostics.textContent = messages.runningDiagnostics;
   for (const element of checkElements.values()) {
     element.dataset.state = "pending";
-    element.querySelector("[data-check-state]").textContent = stateLabels.pending;
-    element.querySelector("[data-check-detail]").textContent = "Ожидается текущий запуск";
+    element.querySelector("[data-check-state]").textContent = messages.states.pending;
+    element.querySelector("[data-check-detail]").textContent = messages.waitingDetail;
   }
   for (const key of ["release", "digest", "worker", "ci-time", "browser-time"]) {
-    setText(`[data-identity="${key}"]`, "ожидается");
+    setText(`[data-identity="${key}"]`, messages.pendingValue);
   }
 }
 
@@ -63,10 +113,10 @@ function setEvidence(link, url) {
 
 function renderIdentity(report, checkedAt) {
   if (!report.identity) return;
-  setText('[data-identity="release"]', report.sourceRelease?.tag ?? "не определён");
+  setText('[data-identity="release"]', report.sourceRelease?.tag ?? messages.unknownRelease);
   setText('[data-identity="digest"]', report.identity.manifestDigest);
   setText('[data-identity="worker"]', report.identity.workerVersion);
-  setText('[data-identity="ci-time"]', report.verificationEvidence?.verifiedAt ?? "не определено");
+  setText('[data-identity="ci-time"]', report.verificationEvidence?.verifiedAt ?? messages.unknownTime);
   setText('[data-identity="browser-time"]', checkedAt);
   if (!report.sourceRelease || !report.deploymentEvidence || !report.verificationEvidence) return;
   setEvidence(document.querySelector('[data-evidence="source"]'), report.sourceRelease.url);
@@ -81,17 +131,17 @@ function renderFinal(report, checkedAt) {
   result.className = `result-card is-${report.ok ? "pass" : report.error?.state ?? "fail"}`;
   resultMark.textContent = report.ok ? "✓" : report.error?.state === "unavailable" ? "?" : "×";
   if (report.ok) {
-    resultTitle.textContent = "Deployment подтверждён";
-    resultSummary.textContent = "CI evidence и свежие production-байты относятся к одной identity и прошли все обязательные проверки.";
-    liveSummary.textContent = "Проверка завершена успешно.";
+    resultTitle.textContent = messages.passTitle;
+    resultSummary.textContent = messages.passSummary;
+    liveSummary.textContent = messages.passLive;
   } else if (report.error?.state === "unavailable") {
-    resultTitle.textContent = "Проверка недоступна";
-    resultSummary.textContent = "Обязательный источник или возможность браузера сейчас недоступны. PASS не выставлен.";
-    liveSummary.textContent = "Проверка завершена: результат недоступен.";
+    resultTitle.textContent = messages.unavailableTitle;
+    resultSummary.textContent = messages.unavailableSummary;
+    liveSummary.textContent = messages.unavailableLive;
   } else {
-    resultTitle.textContent = "Проверка не пройдена";
-    resultSummary.textContent = "Один из обязательных шагов обнаружил несоответствие. PASS не выставлен.";
-    liveSummary.textContent = "Проверка завершена с ошибкой.";
+    resultTitle.textContent = messages.failTitle;
+    resultSummary.textContent = messages.failSummary;
+    liveSummary.textContent = messages.failLive;
   }
   staleWarning.hidden = !report.stale;
   renderIdentity(report, checkedAt);
@@ -112,6 +162,7 @@ async function runVerification() {
   resetPage();
   try {
     const report = await verifyOnlineDeployment({
+      locale,
       signal: activeController.signal,
       onCheck(check) {
         if (thisRun === runNumber) renderCheck(check);
@@ -125,7 +176,7 @@ async function runVerification() {
       stale: false,
       identity: null,
       checks: [],
-      error: { state: "unavailable", message: error?.message ?? "Неизвестная ошибка" },
+      error: { state: "unavailable", message: error?.message ?? messages.unknownError },
     };
     renderFinal(report, new Date().toISOString());
   }

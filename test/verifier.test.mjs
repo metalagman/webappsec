@@ -66,7 +66,7 @@ test("verifier accepts exact local production bytes and SRI without executing co
   assert.equal(report.ok, true);
   assert.deepEqual(report.layers.map(({ state }) => state), ["pass", "pass", "pass"]);
   assert.equal(identityRequests, fixture.manifest.files.length);
-  assert.match(report.layers[2].detail, /2 import-map modules/);
+  assert.match(report.layers[2].detail, /4 import-map modules/);
   assert.match(humanReport(report), /PASS deployment verified/);
 });
 

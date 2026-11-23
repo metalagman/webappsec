@@ -30,7 +30,7 @@ test("verifier build is deterministic, content-addressed, and protected by local
   const firstTree = await tree(first);
   const secondTree = await tree(second);
   assert.deepEqual([...firstTree.keys()], [...secondTree.keys()]);
-  assert.equal(firstTree.size, 3);
+  assert.equal(firstTree.size, 4);
   for (const [name, bytes] of firstTree) assert.deepEqual(bytes, secondTree.get(name), name);
 
   const names = [...firstTree.keys()];
@@ -54,8 +54,18 @@ test("verifier page states exact trust boundary and accessible controls", async 
   const outputDirectory = await mkdtemp(path.join(tmpdir(), "webappsec-verifier-copy-"));
   await buildVerifierSite({ outputDirectory });
   const html = await readFile(path.join(outputDirectory, "index.html"), "utf8");
+  const ruHtml = await readFile(path.join(outputDirectory, "ru/index.html"), "utf8");
   const scriptName = (await readdir(path.join(outputDirectory, "app"))).find((name) => name.endsWith(".js"));
   const script = await readFile(path.join(outputDirectory, "app", scriptName), "utf8");
+
+  for (const phrase of [
+    "Verified by CI",
+    "Verified now in this browser",
+    "Verify again",
+    "Verification result",
+    "Evidence and reproduction",
+    "Cosign and the reproducible build run in a trusted GitHub Actions workflow",
+  ]) assert.match(html, new RegExp(phrase));
 
   for (const phrase of [
     "Проверено CI",
@@ -64,8 +74,10 @@ test("verifier page states exact trust boundary and accessible controls", async 
     "Результат проверки",
     "Доказательства и воспроизведение",
     "Cosign и воспроизводимая сборка выполняются доверенным GitHub Actions workflow",
-  ]) assert.match(html, new RegExp(phrase));
+  ]) assert.match(ruHtml, new RegExp(phrase));
 
+  assert.match(html, /href="\/ru\/"/);
+  assert.match(ruHtml, /href="\/"/);
   assert.match(html, /role="status"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /data-check-id="ci:signatures"/);

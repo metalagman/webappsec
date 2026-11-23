@@ -52,7 +52,7 @@ async function requireVerified() {
     { timeout: 60_000 },
   );
   const title = await page.locator("[data-result-title]").textContent();
-  if (title !== "Deployment подтверждён") {
+  if (title !== "Deployment verified") {
     const diagnostics = await page.locator("[data-diagnostics]").textContent();
     throw new Error(`online verifier returned ${title}: ${diagnostics}`);
   }
@@ -66,8 +66,8 @@ async function requireVerified() {
     const ids = await failedChecks.evaluateAll((nodes) => nodes.map((node) => node.dataset.checkId));
     throw new Error(`online verifier contains non-PASS checks: ${ids.join(", ")}`);
   }
-  if ((await page.locator("#ci-title").textContent()) !== "Проверено CI") throw new Error("CI trust label mismatch");
-  if ((await page.locator("#browser-title").textContent()) !== "Проверено сейчас в этом браузере") {
+  if ((await page.locator("#ci-title").textContent()) !== "Verified by CI") throw new Error("CI trust label mismatch");
+  if ((await page.locator("#browser-title").textContent()) !== "Verified now in this browser") {
     throw new Error("browser trust label mismatch");
   }
   for (const id of ["browser:production-bytes", "browser:sri"]) {

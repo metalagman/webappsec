@@ -24,14 +24,15 @@ export async function buildSite({
 } = {}) {
   const sourceMetadata = await lstat(sourceDirectory);
   if (sourceMetadata.isSymbolicLink() || !sourceMetadata.isDirectory()) throw new Error("site source must be a regular directory");
-  const sourceFiles = ["index.html", "404.html", "styles.css", "app.js", "interactions.js"];
+  const sourceFiles = ["index.html", "ru/index.html", "404.html", "styles.css", "app.js", "interactions.js"];
   for (const name of sourceFiles) {
     const metadata = await lstat(path.join(sourceDirectory, name));
     if (metadata.isSymbolicLink() || !metadata.isFile()) throw new Error(`site source must be a regular file: ${name}`);
     if (metadata.size > 5 * 1024 * 1024) throw new Error(`site source exceeds size limit: ${name}`);
   }
-  const [template, notFoundTemplate, styleBytes, scriptTemplate, interactionsBytes] = await Promise.all([
+  const [template, ruTemplate, notFoundTemplate, styleBytes, scriptTemplate, interactionsBytes] = await Promise.all([
     readFile(path.join(sourceDirectory, "index.html"), "utf8"),
+    readFile(path.join(sourceDirectory, "ru/index.html"), "utf8"),
     readFile(path.join(sourceDirectory, "404.html"), "utf8"),
     readFile(path.join(sourceDirectory, "styles.css")),
     readFile(path.join(sourceDirectory, "app.js"), "utf8"),
@@ -67,12 +68,17 @@ export async function buildSite({
   ].join("; ");
   const responseCsp = `${documentCsp}; frame-ancestors 'none'`;
 
-  let html = replaceExactlyOnce(template, "{{DOCUMENT_CSP}}", documentCsp);
-  html = replaceExactlyOnce(html, "{{IMPORT_MAP}}", importMap);
-  html = replaceExactlyOnce(html, "{{STYLE_HREF}}", `/app/${styleName}`);
-  html = replaceExactlyOnce(html, "{{STYLE_INTEGRITY}}", styleIntegrity);
-  html = replaceExactlyOnce(html, "{{SCRIPT_SRC}}", `/app/${scriptName}`);
-  html = replaceExactlyOnce(html, "{{SCRIPT_INTEGRITY}}", scriptIntegrity);
+  const renderPage = (source) => {
+    let page = replaceExactlyOnce(source, "{{DOCUMENT_CSP}}", documentCsp);
+    page = replaceExactlyOnce(page, "{{IMPORT_MAP}}", importMap);
+    page = replaceExactlyOnce(page, "{{STYLE_HREF}}", `/app/${styleName}`);
+    page = replaceExactlyOnce(page, "{{STYLE_INTEGRITY}}", styleIntegrity);
+    page = replaceExactlyOnce(page, "{{SCRIPT_SRC}}", `/app/${scriptName}`);
+    page = replaceExactlyOnce(page, "{{SCRIPT_INTEGRITY}}", scriptIntegrity);
+    return page;
+  };
+  const html = renderPage(template);
+  const ruHtml = renderPage(ruTemplate);
 
   let notFound = replaceExactlyOnce(
     notFoundTemplate,
@@ -83,8 +89,10 @@ export async function buildSite({
 
   await rm(outputDirectory, { recursive: true, force: true });
   await mkdir(path.join(outputDirectory, "app"), { recursive: true });
+  await mkdir(path.join(outputDirectory, "ru"), { recursive: true });
   await Promise.all([
     writeFile(path.join(outputDirectory, "index.html"), html),
+    writeFile(path.join(outputDirectory, "ru/index.html"), ruHtml),
     writeFile(path.join(outputDirectory, "404.html"), notFound),
     writeFile(path.join(outputDirectory, "app", styleName), styleBytes),
     writeFile(path.join(outputDirectory, "app", scriptName), scriptBytes),
@@ -100,6 +108,7 @@ export async function buildSite({
       `app/${interactionsName}`,
       `app/${styleName}`,
       "index.html",
+      "ru/index.html",
       "security-policy.txt",
     ],
   };

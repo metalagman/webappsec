@@ -70,7 +70,11 @@ footer { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
 .brand-mark { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border: 1px solid var(--acid); color: var(--acid); font-size: .7rem; }
 .site-header nav { display: flex; gap: 1.7rem; color: var(--muted); }
 .site-header nav a { text-decoration: none; }
-.repo-link { justify-self: end; color: var(--acid); }
+.header-actions { justify-self: end; display: inline-flex; align-items: center; gap: 1.1rem; }
+.lang-switch { display: inline-flex; align-items: center; gap: .35rem; color: var(--dim); }
+.lang-switch a { text-decoration: none; color: var(--muted); }
+.lang-switch a[aria-current="page"] { color: var(--ink); font-weight: 800; }
+.repo-link { color: var(--acid); }
 
 .hero { min-height: 660px; padding: 7rem 0 6rem; display: grid; grid-template-columns: 1.28fr .72fr; gap: 7vw; align-items: center; }
 .eyebrow, .section-kicker { margin: 0 0 1.15rem; color: var(--acid); font: 700 .72rem/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; }

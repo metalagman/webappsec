@@ -27,13 +27,16 @@ export function enhancePage() {
 
   const copyButton = document.querySelector("[data-copy]");
   if (copyButton) {
+    const isRussian = document.documentElement.lang.toLowerCase().startsWith("ru");
+    const copiedLabel = isRussian ? "Скопировано" : "Copied";
+    const fallbackLabel = isRussian ? "Скопируйте из терминала" : "Copy from terminal";
     copyButton.addEventListener("click", async () => {
       const original = copyButton.textContent;
       try {
         await navigator.clipboard.writeText(copyButton.dataset.copy);
-        copyButton.textContent = "Скопировано";
+        copyButton.textContent = copiedLabel;
       } catch {
-        copyButton.textContent = "Скопируйте из терминала";
+        copyButton.textContent = fallbackLabel;
       }
       window.setTimeout(() => {
         copyButton.textContent = original;

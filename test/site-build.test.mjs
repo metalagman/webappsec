@@ -33,7 +33,7 @@ test("build emits deterministic local assets with matching SRI", async () => {
   const firstNames = (await readdir(first)).sort();
   const secondNames = (await readdir(second)).sort();
   assert.deepEqual(firstNames, secondNames);
-  assert.deepEqual(firstNames, ["404.html", "app", "index.html", "security-policy.txt"]);
+  assert.deepEqual(firstNames, ["404.html", "app", "index.html", "ru", "security-policy.txt"]);
 
   const appFiles = (await readdir(path.join(first, "app"))).sort();
   assert.equal(appFiles.length, 3);
@@ -81,6 +81,24 @@ test("page explains every evidence layer and its limits", async () => {
   const outputDirectory = await mkdtemp(path.join(tmpdir(), "webappsec-copy-"));
   await buildSite({ outputDirectory });
   const html = await readFile(path.join(outputDirectory, "index.html"), "utf8");
+  const ruHtml = await readFile(path.join(outputDirectory, "ru/index.html"), "utf8");
+
+  for (const phrase of [
+    "SBOM",
+    "CVE",
+    "SLSA provenance",
+    "Reproducible build",
+    "Sigstore / Cosign",
+    "Signed manifest",
+    "External verifier",
+    "Subresource Integrity",
+    "What it proves",
+    "Trust boundary",
+    "An SBOM does not prove",
+    "SRI does not protect the HTML document",
+  ]) {
+    assert.match(html, new RegExp(phrase));
+  }
 
   for (const phrase of [
     "SBOM",
@@ -88,25 +106,34 @@ test("page explains every evidence layer and its limits", async () => {
     "SLSA provenance",
     "Воспроизводимая сборка",
     "Sigstore / Cosign",
-    "Подписанный manifest",
-    "Внешний verifier",
+    "Подписанный манифест",
+    "Внешний верификатор",
     "Subresource Integrity",
     "Что доказывает",
     "Граница проверки",
     "SBOM не доказывает",
     "SRI не защищает HTML-документ",
   ]) {
-    assert.match(html, new RegExp(phrase));
+    assert.match(ruHtml, new RegExp(phrase));
   }
 
   assert.match(html, /https:\/\/github\.com\/metalagman\/webappsec/);
   assert.match(html, /href="https:\/\/verify\.webappsec\.metalagman\.dev"/);
-  assert.match(html, /Проверить текущий deployment онлайн/);
-  assert.match(html, /Проверено CI/);
-  assert.match(html, /Проверено сейчас в браузере/);
+  assert.match(html, /href="\/ru\/"/);
+  assert.match(html, /Verify current deployment online/);
+  assert.match(html, /Verified by CI/);
+  assert.match(html, /Verified now in your browser/);
   assert.match(html, /SHA-256/);
   assert.match(html, /npm run verify:release -- --release/);
   assert.doesNotMatch(html, /https?:\/\/(?:fonts|cdn|unpkg|jsdelivr)\./);
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /default-src 'none'/);
+
+  assert.match(ruHtml, /href="https:\/\/verify\.webappsec\.metalagman\.dev\/ru\/"/);
+  assert.match(ruHtml, /href="\/"/);
+  assert.match(ruHtml, /Проверить текущий deployment онлайн/);
+  assert.match(ruHtml, /Проверено CI/);
+  assert.match(ruHtml, /Проверено сейчас в браузере/);
+  assert.doesNotMatch(ruHtml, /https?:\/\/(?:fonts|cdn|unpkg|jsdelivr)\./);
+  assert.match(ruHtml, /Content-Security-Policy/);
 });

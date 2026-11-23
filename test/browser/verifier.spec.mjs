@@ -136,10 +136,14 @@ async function routeVerifier(page, {
       await route.fulfill({ body: data.manifestBytes, contentType: "application/json" });
       return;
     }
-    const relative = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const relative = url.pathname === "/"
+      ? "index.html"
+      : url.pathname === "/ru" || url.pathname === "/ru/"
+        ? "ru/index.html"
+        : url.pathname.slice(1);
     try {
       const body = await readFile(path.join(outputDirectory, relative));
-      await route.fulfill({ body, contentType: url.pathname.endsWith(".css") ? "text/css" : url.pathname.endsWith(".html") || url.pathname === "/" ? "text/html" : "text/javascript" });
+      await route.fulfill({ body, contentType: url.pathname.endsWith(".css") ? "text/css" : relative.endsWith(".html") ? "text/html" : "text/javascript" });
     } catch {
       await route.fulfill({ status: 404, body: "missing" });
     }
@@ -176,17 +180,25 @@ test("auto-run clearly joins CI trust with fresh browser verification", async ({
   const { data } = await routeVerifier(page);
   await page.goto(verifierOrigin);
 
-  await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Проверено CI" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Проверено сейчас в этом браузере" })).toBeVisible();
-  await expect(page.locator('[data-check-id="ci:signatures"] [data-check-state]')).toHaveText("пройдено");
-  await expect(page.locator('[data-check-id="browser:production-bytes"] [data-check-state]')).toHaveText("пройдено");
+  await expect(page.getByRole("heading", { name: "Deployment verified" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verified by CI" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verified now in this browser" })).toBeVisible();
+  await expect(page.locator('[data-check-id="ci:signatures"] [data-check-state]')).toHaveText("pass");
+  await expect(page.locator('[data-check-id="browser:production-bytes"] [data-check-state]')).toHaveText("pass");
   await expect(page.locator('[data-identity="release"]')).toHaveText(releaseTag);
   await expect(page.locator('[data-identity="digest"]')).toHaveText(data.manifestDigest);
   await expect(page.locator('[data-evidence="verification"]')).toHaveAttribute("href", data.snapshot.verificationEvidence.url);
   await expect(page.locator('[data-check-id="ci:signatures"] [data-check-detail]')).toContainText("<img src=x");
   await expect(page.locator('[data-check-id="ci:signatures"] img')).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-production", "never-executed");
+
+  await page.getByRole("link", { name: "RU", exact: true }).click();
+  await expect(page).toHaveURL(`${verifierOrigin}/ru/`);
+  await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Проверено CI" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Проверено сейчас в этом браузере" })).toBeVisible();
+  await expect(page.locator('[data-check-id="ci:signatures"] [data-check-state]')).toHaveText("пройдено");
+  await expect(page.locator('[data-check-id="browser:production-bytes"] [data-check-state]')).toHaveText("пройдено");
 });
 
 test("progress is restrained and retry cancels an in-flight stale run", async ({ page }) => {
@@ -194,22 +206,22 @@ test("progress is restrained and retry cancels an in-flight stale run", async ({
   const { releaseFirstSnapshot } = await routeVerifier(page, { counter, delayFirstSnapshot: true });
   await page.goto(verifierOrigin);
   await expect.poll(() => counter.snapshots).toBe(1);
-  await expect(page.getByRole("heading", { name: "Проверка выполняется" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verification in progress" })).toBeVisible();
   await expect(page.locator("#result")).toHaveAttribute("aria-busy", "true");
-  await expect(page.locator("[data-live-summary]")).toHaveText("Проверка запущена.");
-  await expect(page.locator('[data-check-id="browser:snapshot"] [data-check-state]')).toHaveText("проверяется");
-  await page.getByRole("button", { name: "Повторить проверку" }).click();
+  await expect(page.locator("[data-live-summary]")).toHaveText("Verification started.");
+  await expect(page.locator('[data-check-id="browser:snapshot"] [data-check-state]')).toHaveText("running");
+  await page.getByRole("button", { name: "Verify again" }).click();
   await expect.poll(() => counter.snapshots).toBe(2);
-  await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deployment verified" })).toBeVisible();
   releaseFirstSnapshot();
   await page.waitForTimeout(100);
-  await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deployment verified" })).toBeVisible();
 });
 
 test("network loss is unavailable and tampered bytes fail closed", async ({ page }) => {
   await routeVerifier(page, { unavailable: true });
   await page.goto(verifierOrigin);
-  await expect(page.getByRole("heading", { name: "Проверка недоступна" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verification unavailable" })).toBeVisible();
   await expect(page.locator("#result")).toHaveAttribute("aria-busy", "false");
   await expect(page.locator('[data-identity="release"]')).toHaveText(releaseTag);
   await expect(page.locator('[data-evidence="verification"]')).toBeVisible();
@@ -217,8 +229,8 @@ test("network loss is unavailable and tampered bytes fail closed", async ({ page
   await page.unrouteAll({ behavior: "wait" });
   await routeVerifier(page, { tamper: true });
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Проверка не пройдена" })).toBeVisible();
-  await expect(page.locator('[data-check-id="browser:production-bytes"] [data-check-state]')).toHaveText("ошибка");
+  await expect(page.getByRole("heading", { name: "Verification failed" })).toBeVisible();
+  await expect(page.locator('[data-check-id="browser:production-bytes"] [data-check-state]')).toHaveText("fail");
   await expect(page.locator('[data-identity="release"]')).toHaveText(releaseTag);
   await expect(page.locator('[data-evidence="verification"]')).toBeVisible();
 });
@@ -226,22 +238,22 @@ test("network loss is unavailable and tampered bytes fail closed", async ({ page
 test("SRI mismatch fails closed and stale evidence is visibly warned", async ({ page }) => {
   await routeVerifier(page, { sriMismatch: true });
   await page.goto(verifierOrigin);
-  await expect(page.getByRole("heading", { name: "Проверка не пройдена" })).toBeVisible();
-  await expect(page.locator('[data-check-id="browser:sri"] [data-check-state]')).toHaveText("ошибка");
+  await expect(page.getByRole("heading", { name: "Verification failed" })).toBeVisible();
+  await expect(page.locator('[data-check-id="browser:sri"] [data-check-state]')).toHaveText("fail");
 
   await page.unrouteAll({ behavior: "wait" });
   await routeVerifier(page, { stale: true });
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Deployment подтверждён" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deployment verified" })).toBeVisible();
   await expect(page.locator("[data-stale]")).toBeVisible();
-  await expect(page.locator("[data-stale]")).toContainText("старше 36 часов");
+  await expect(page.locator("[data-stale]")).toContainText("older than 36 hours");
 });
 
 test("import map integrity mismatch fails closed", async ({ page }) => {
   await routeVerifier(page, { importMapMismatch: true });
   await page.goto(verifierOrigin);
-  await expect(page.getByRole("heading", { name: "Проверка не пройдена" })).toBeVisible();
-  await expect(page.locator('[data-check-id="browser:sri"] [data-check-state]')).toHaveText("ошибка");
+  await expect(page.getByRole("heading", { name: "Verification failed" })).toBeVisible();
+  await expect(page.locator('[data-check-id="browser:sri"] [data-check-state]')).toHaveText("fail");
   await expect(page.locator('[data-check-id="browser:sri"] [data-check-detail]')).toContainText("import map integrity mismatch");
 });
 
@@ -251,8 +263,8 @@ test("missing Web Crypto is reported as unavailable without false PASS", async (
   });
   await routeVerifier(page);
   await page.goto(verifierOrigin);
-  await expect(page.getByRole("heading", { name: "Проверка недоступна" })).toBeVisible();
-  await expect(page.locator('[data-check-id="browser:capabilities"] [data-check-state]')).toHaveText("недоступно");
+  await expect(page.getByRole("heading", { name: "Verification unavailable" })).toBeVisible();
+  await expect(page.locator('[data-check-id="browser:capabilities"] [data-check-state]')).toHaveText("unavailable");
   await expect(page.locator('[data-check-id="browser:capabilities"] [data-check-detail]')).toContainText("Web Crypto");
 });
 
@@ -261,9 +273,9 @@ test("mobile, keyboard focus, and reduced motion remain usable", async ({ page }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(verifierOrigin);
-  await expect(page.getByRole("button", { name: "Повторить проверку" })).toBeVisible();
-  await page.getByRole("button", { name: "Повторить проверку" }).focus();
-  await expect(page.getByRole("button", { name: "Повторить проверку" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Verify again" })).toBeVisible();
+  await page.getByRole("button", { name: "Verify again" }).focus();
+  await expect(page.getByRole("button", { name: "Verify again" })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(await page.locator("html").evaluate((element) => getComputedStyle(element).scrollBehavior)).toBe("auto");
 });

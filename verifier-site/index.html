@@ -1,98 +1,103 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#07100e">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://webappsec.metalagman.dev; base-uri 'none'; form-action 'none'">
-    <meta name="description" content="Онлайн-проверка подписанных доказательств и текущих production-байтов webappsec.metalagman.dev.">
+    <meta name="description" content="Online verification of signed CI evidence and live production bytes for webappsec.metalagman.dev.">
     <title>Verify Deploy — webappsec.metalagman.dev</title>
     <link rel="stylesheet" href="{{STYLE_HREF}}" integrity="{{STYLE_INTEGRITY}}">
     <script type="module" src="{{SCRIPT_SRC}}" integrity="{{SCRIPT_INTEGRITY}}"></script>
   </head>
   <body>
-    <a class="skip-link" href="#result">К результату</a>
+    <a class="skip-link" href="#result">Skip to result</a>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Verify Deploy — на главную"><span aria-hidden="true">V/</span> Verify Deploy</a>
-      <nav aria-label="Ссылки проекта">
-        <a href="https://webappsec.metalagman.dev">Демо-сайт ↗</a>
-        <a href="https://github.com/metalagman/webappsec">Исходный код ↗</a>
+      <a class="brand" href="/" aria-label="Verify Deploy — Home"><span aria-hidden="true">V/</span> Verify Deploy</a>
+      <nav aria-label="Project links">
+        <a href="https://webappsec.metalagman.dev">Demo site ↗</a>
+        <a href="https://github.com/metalagman/webappsec">Source code ↗</a>
         <a href="https://github.com/metalagman/webappsec/actions/workflows/deploy-verifier.yml">Deploy workflow ↗</a>
+        <span class="lang-switch" aria-label="Language">
+          <a href="/" aria-current="page">EN</a>
+          <span aria-hidden="true">/</span>
+          <a href="/ru/" hreflang="ru">RU</a>
+        </span>
       </nav>
     </header>
 
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow"><span class="pulse" aria-hidden="true"></span> Live supply-chain verification</p>
-        <h1 id="page-title">Проверяем текущий<br><em>production deployment.</em></h1>
-        <p class="lead">Страница соединяет подписанный результат доверенного CI с новой проверкой байтов, которые прямо сейчас отдаёт <code>webappsec.metalagman.dev</code>.</p>
-        <p class="trust-note"><strong>Граница доверия:</strong> Cosign и воспроизводимая сборка выполняются доверенным GitHub Actions workflow. Этот браузер независимо проверяет identity, SHA-256 всех файлов, SRI и <code>importmap.integrity</code>.</p>
+        <h1 id="page-title">Verifying the live<br><em>production deployment.</em></h1>
+        <p class="lead">This page joins the signed output of a trusted CI run with a fresh verification of the bytes currently served by <code>webappsec.metalagman.dev</code>.</p>
+        <p class="trust-note"><strong>Trust boundary:</strong> Cosign and the reproducible build run in a trusted GitHub Actions workflow. Your browser independently checks the deployment identity, SHA-256 of every file, SRI, and <code>importmap.integrity</code>.</p>
       </section>
 
       <section class="result-card is-running" id="result" aria-labelledby="result-title" aria-busy="true">
         <div class="result-mark" data-result-mark aria-hidden="true">···</div>
         <div>
-          <p class="section-label">Результат проверки</p>
-          <h2 id="result-title" data-result-title>Проверка выполняется</h2>
-          <p class="result-summary" data-result-summary>Получаем свежий snapshot и связываем его с текущим deployment.</p>
-          <p class="live-summary" role="status" aria-live="polite" aria-atomic="true" data-live-summary>Проверка запущена.</p>
-          <p class="stale-warning" data-stale hidden>CI-проверка старше 36 часов. Криптографическая проверка действительна, но evidence стоит обновить.</p>
+          <p class="section-label">Verification result</p>
+          <h2 id="result-title" data-result-title>Verification in progress</h2>
+          <p class="result-summary" data-result-summary>Fetching the latest CI snapshot and binding it to the live deployment.</p>
+          <p class="live-summary" role="status" aria-live="polite" aria-atomic="true" data-live-summary>Verification started.</p>
+          <p class="stale-warning" data-stale hidden>The CI verification is older than 36 hours. The cryptographic proof is still valid, but the evidence should be refreshed.</p>
         </div>
-        <button class="retry" type="button" data-retry>Повторить проверку</button>
+        <button class="retry" type="button" data-retry>Verify again</button>
       </section>
 
       <section class="identity" aria-labelledby="identity-title">
         <div class="section-heading">
-          <p class="section-label">Текущая identity</p>
-          <h2 id="identity-title">Один release на всём пути</h2>
+          <p class="section-label">Current identity</p>
+          <h2 id="identity-title">One release all the way through</h2>
         </div>
         <dl>
-          <div><dt>Release</dt><dd data-identity="release">ожидается</dd></div>
-          <div><dt>Manifest SHA-256</dt><dd><code data-identity="digest">ожидается</code></dd></div>
-          <div><dt>Worker version</dt><dd><code data-identity="worker">ожидается</code></dd></div>
-          <div><dt>CI verified at</dt><dd><time data-identity="ci-time">ожидается</time></dd></div>
-          <div><dt>Browser checked at</dt><dd><time data-identity="browser-time">ожидается</time></dd></div>
+          <div><dt>Release</dt><dd data-identity="release">pending</dd></div>
+          <div><dt>Manifest SHA-256</dt><dd><code data-identity="digest">pending</code></dd></div>
+          <div><dt>Worker version</dt><dd><code data-identity="worker">pending</code></dd></div>
+          <div><dt>CI verified at</dt><dd><time data-identity="ci-time">pending</time></dd></div>
+          <div><dt>Browser checked at</dt><dd><time data-identity="browser-time">pending</time></dd></div>
         </dl>
       </section>
 
       <div class="check-columns">
         <section class="check-group" aria-labelledby="ci-title">
-          <div class="group-head"><span>01</span><div><p class="section-label">Доверенный workflow</p><h2 id="ci-title">Проверено CI</h2></div></div>
-          <p>Эти результаты загружены из immutable evidence. Браузер показывает их и связывает с release, но не запускает Cosign, CVE scan или rebuild.</p>
+          <div class="group-head"><span>01</span><div><p class="section-label">Trusted workflow</p><h2 id="ci-title">Verified by CI</h2></div></div>
+          <p>These results come from immutable evidence. The browser displays them and binds them to the release, but does not run Cosign, CVE scanning, or a rebuild.</p>
           <ol class="checks">
-            <li data-check-id="ci:release-signatures"><span class="dot"></span><div><b>Подпись release</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:deployment-signatures"><span class="dot"></span><div><b>Подпись deployment</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:verification-signatures"><span class="dot"></span><div><b>Подпись verification</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:release-resolution"><span class="dot"></span><div><b>Release resolution</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:evidence-inventory"><span class="dot"></span><div><b>Evidence inventory</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:signatures"><span class="dot"></span><div><b>Cosign signatures</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:attestations"><span class="dot"></span><div><b>SLSA attestations</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:sbom"><span class="dot"></span><div><b>SBOM</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:vulnerability-evidence"><span class="dot"></span><div><b>CVE evidence</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:reproducible-build"><span class="dot"></span><div><b>Reproducible build</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:production-bytes"><span class="dot"></span><div><b>Production bytes in CI</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="ci:sri"><span class="dot"></span><div><b>SRI in CI</b><small data-check-detail>Ожидается snapshot</small></div><strong data-check-state>ожидается</strong></li>
+            <li data-check-id="ci:release-signatures"><span class="dot"></span><div><b>Release signatures</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:deployment-signatures"><span class="dot"></span><div><b>Deployment signatures</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:verification-signatures"><span class="dot"></span><div><b>Verification signatures</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:release-resolution"><span class="dot"></span><div><b>Release resolution</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:evidence-inventory"><span class="dot"></span><div><b>Evidence inventory</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:signatures"><span class="dot"></span><div><b>Cosign signatures</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:attestations"><span class="dot"></span><div><b>SLSA attestations</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:sbom"><span class="dot"></span><div><b>SBOM</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:vulnerability-evidence"><span class="dot"></span><div><b>CVE evidence</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:reproducible-build"><span class="dot"></span><div><b>Reproducible build</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:production-bytes"><span class="dot"></span><div><b>Production bytes in CI</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="ci:sri"><span class="dot"></span><div><b>SRI in CI</b><small data-check-detail>Waiting for snapshot</small></div><strong data-check-state>pending</strong></li>
           </ol>
         </section>
 
         <section class="check-group browser-group" aria-labelledby="browser-title">
-          <div class="group-head"><span>02</span><div><p class="section-label">Свежий сетевой запрос</p><h2 id="browser-title">Проверено сейчас в этом браузере</h2></div></div>
-          <p>Fetch работает без credentials и cache. Production-код не исполняется: HTML разбирается отдельно, файлы только хешируются.</p>
+          <div class="group-head"><span>02</span><div><p class="section-label">Fresh network fetch</p><h2 id="browser-title">Verified now in this browser</h2></div></div>
+          <p>Requests run without credentials or cache. Production code is never executed: HTML is parsed passively and files are only hashed.</p>
           <ol class="checks">
-            <li data-check-id="browser:capabilities"><span class="dot"></span><div><b>Возможности браузера</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:snapshot"><span class="dot"></span><div><b>CI snapshot</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:manifest"><span class="dot"></span><div><b>Release manifest</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:identity"><span class="dot"></span><div><b>Deployment identity</b><small data-check-detail>Ожидается запуск</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:production-bytes"><span class="dot"></span><div><b>Все production-файлы</b><small data-check-detail>SHA-256 ещё не вычислен</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:sri"><span class="dot"></span><div><b>SRI + import map integrity</b><small data-check-detail>SHA-384 ещё не вычислен</small></div><strong data-check-state>ожидается</strong></li>
-            <li data-check-id="browser:stability"><span class="dot"></span><div><b>Стабильная identity</b><small data-check-detail>Финальная проверка ещё не выполнена</small></div><strong data-check-state>ожидается</strong></li>
+            <li data-check-id="browser:capabilities"><span class="dot"></span><div><b>Browser capabilities</b><small data-check-detail>Waiting to start</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:snapshot"><span class="dot"></span><div><b>CI snapshot</b><small data-check-detail>Waiting to start</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:manifest"><span class="dot"></span><div><b>Release manifest</b><small data-check-detail>Waiting to start</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:identity"><span class="dot"></span><div><b>Deployment identity</b><small data-check-detail>Waiting to start</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:production-bytes"><span class="dot"></span><div><b>All production files</b><small data-check-detail>SHA-256 not computed yet</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:sri"><span class="dot"></span><div><b>SRI + import map integrity</b><small data-check-detail>SHA-384 not computed yet</small></div><strong data-check-state>pending</strong></li>
+            <li data-check-id="browser:stability"><span class="dot"></span><div><b>Stable identity</b><small data-check-detail>Final check not run yet</small></div><strong data-check-state>pending</strong></li>
           </ol>
         </section>
       </div>
 
       <section class="evidence" aria-labelledby="evidence-title">
-        <div class="section-heading"><p class="section-label">Проверить независимо</p><h2 id="evidence-title">Доказательства и воспроизведение</h2></div>
+        <div class="section-heading"><p class="section-label">Verify independently</p><h2 id="evidence-title">Evidence and reproduction</h2></div>
         <div class="evidence-grid">
           <div class="evidence-links" data-evidence-links hidden>
             <a data-evidence="source">Source release ↗</a>
@@ -101,8 +106,8 @@
             <a data-evidence="run">GitHub Actions run ↗</a>
           </div>
           <details>
-            <summary>Локальная полная проверка</summary>
-            <p>Команда заново проверит Cosign policy, provenance, evidence и воспроизводимую сборку.</p>
+            <summary>Full local verification</summary>
+            <p>These commands re-verify Cosign policy, provenance, evidence, and the reproducible build from a clean checkout.</p>
             <pre><code>git clone https://github.com/metalagman/webappsec
 cd webappsec
 git checkout &lt;tag&gt; &amp;&amp; npm ci &amp;&amp; npm run tools:signing
@@ -110,12 +115,12 @@ npm run verify:release -- --release &lt;tag&gt; --rebuild</code></pre>
           </details>
         </div>
         <details class="diagnostics">
-          <summary>Диагностика текущего запуска</summary>
-          <pre data-diagnostics>Проверка выполняется…</pre>
+          <summary>Current run diagnostics</summary>
+          <pre data-diagnostics>Verification in progress…</pre>
         </details>
       </section>
     </main>
 
-    <footer><span>Открытая проверка без аккаунта и секретов.</span><a href="https://github.com/metalagman/webappsec">metalagman/webappsec ↗</a></footer>
+    <footer><span>Open verification with no account or secrets.</span><a href="https://github.com/metalagman/webappsec">metalagman/webappsec ↗</a></footer>
   </body>
 </html>

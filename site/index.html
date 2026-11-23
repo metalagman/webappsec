@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,46 +11,53 @@
     >
     <meta
       name="description"
-      content="Проверяемая цепочка от исходного кода до байтов работающего сайта: SBOM, SLSA, Cosign, reproducible build, manifest, verifier и SRI."
+      content="Verifiable chain from source code to live website bytes: SBOM, SLSA, Cosign, reproducible builds, signed manifest, external verifier, and SRI."
     >
-    <title>Proof of Deploy — проверяемый веб-релиз</title>
+    <title>Proof of Deploy — Verifiable Web Release</title>
     <link rel="stylesheet" href="{{STYLE_HREF}}" integrity="{{STYLE_INTEGRITY}}">
     <script type="importmap">{{IMPORT_MAP}}</script>
     <script type="module" src="{{SCRIPT_SRC}}" integrity="{{SCRIPT_INTEGRITY}}"></script>
   </head>
   <body>
-    <a class="skip-link" href="#content">К содержанию</a>
+    <a class="skip-link" href="#content">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Proof of Deploy — на главную">
+      <a class="brand" href="/" aria-label="Proof of Deploy — Home">
         <span class="brand-mark" aria-hidden="true">P/D</span>
         <span>Proof of Deploy</span>
       </a>
-      <nav aria-label="Основная навигация">
-        <a href="#chain">Цепочка</a>
-        <a href="#layers">Слои</a>
+      <nav aria-label="Primary navigation">
+        <a href="#chain">Chain</a>
+        <a href="#layers">Layers</a>
         <a href="https://verify.webappsec.metalagman.dev">Online verify ↗</a>
       </nav>
-      <a class="repo-link" href="https://github.com/metalagman/webappsec">GitHub ↗</a>
+      <div class="header-actions">
+        <span class="lang-switch" aria-label="Language">
+          <a href="/" aria-current="page">EN</a>
+          <span aria-hidden="true">/</span>
+          <a href="/ru/" hreflang="ru">RU</a>
+        </span>
+        <a class="repo-link" href="https://github.com/metalagman/webappsec">GitHub ↗</a>
+      </div>
     </header>
 
     <main id="content">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="pulse" aria-hidden="true"></span> Проверяемый web deployment</p>
-          <h1 id="hero-title">От коммита до байтов<br><em>в вашем браузере.</em></h1>
+          <p class="eyebrow"><span class="pulse" aria-hidden="true"></span> Verifiable web deployment</p>
+          <h1 id="hero-title">From commit to bytes<br><em>in your browser.</em></h1>
           <p class="hero-lead">
-            Этот сайт показывает, как связать открытый исходный код, воспроизводимую CI-сборку,
-            подписанный артефакт и фактические файлы production — без обещаний, которые нельзя проверить.
+            This site demonstrates how to bind public source code, a reproducible CI build,
+            a signed artifact, and live production files—without unverifiable promises.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Проверить текущий deployment онлайн</a>
-            <a class="button secondary" href="https://github.com/metalagman/webappsec/releases">Открыть evidence</a>
+            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Verify current deployment online</a>
+            <a class="button secondary" href="https://github.com/metalagman/webappsec/releases">Inspect evidence</a>
           </div>
         </div>
-        <aside class="proof-card" aria-label="Состояние демонстрационного релиза">
+        <aside class="proof-card" aria-label="Demo release overview">
           <div class="proof-head">
-            <span>release / v0.2.7</span>
-            <span class="status signed">верифицирован</span>
+            <span>release / v0.4.0</span>
+            <span class="status signed">verified</span>
           </div>
           <dl>
             <div><dt>source</dt><dd><a href="https://github.com/metalagman/webappsec">metalagman/webappsec</a></dd></div>
@@ -58,33 +65,33 @@
             <div><dt>signer</dt><dd><code>GitHub OIDC</code></dd></div>
             <div><dt>origin</dt><dd><code>webappsec.metalagman.dev</code></dd></div>
           </dl>
-          <p>Digest и Worker version публикуются в ответе и подписанной записи deployment.</p>
+          <p>The manifest digest and Worker version are published in HTTP responses and in the signed deployment record.</p>
         </aside>
       </section>
 
       <section class="chain-section" id="chain" aria-labelledby="chain-title">
-        <div class="section-kicker">01 / Маршрут доказательства</div>
-        <h2 id="chain-title">Одна идентичность релиза на каждом шаге</h2>
-        <ol class="chain" aria-label="Цепочка поставки">
-          <li><span class="step">01</span><strong>Исходный код</strong><small>commit SHA</small></li>
-          <li><span class="step">02</span><strong>CI-сборка</strong><small>SLSA provenance</small></li>
-          <li><span class="step">03</span><strong>Артефакт</strong><small>digest + signature</small></li>
+        <div class="section-kicker">01 / Proof path</div>
+        <h2 id="chain-title">One release identity at every step</h2>
+        <ol class="chain" aria-label="Supply chain">
+          <li><span class="step">01</span><strong>Source code</strong><small>commit SHA</small></li>
+          <li><span class="step">02</span><strong>CI build</strong><small>SLSA provenance</small></li>
+          <li><span class="step">03</span><strong>Artifact</strong><small>digest + signature</small></li>
           <li><span class="step">04</span><strong>Deployment</strong><small>Worker version</small></li>
-          <li><span class="step">05</span><strong>Браузер</strong><small>bytes + SRI</small></li>
+          <li><span class="step">05</span><strong>Browser</strong><small>bytes + SRI</small></li>
         </ol>
         <p class="chain-note">
-          Ключ цепочки — digest канонического manifest. Если commit, artifact, provenance или production
-          указывают на разные digest, verifier завершится с ошибкой.
+          The chain is anchored on the canonical manifest digest. If the commit, artifact, provenance,
+          or production responses point to different digests, the verifier fails closed.
         </p>
       </section>
 
       <section class="layers-section" id="layers" aria-labelledby="layers-title">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">02 / Слои проверки</div>
-            <h2 id="layers-title">Каждый слой отвечает на свой вопрос</h2>
+            <div class="section-kicker">02 / Verification layers</div>
+            <h2 id="layers-title">Each layer answers its own question</h2>
           </div>
-          <p>Ни один документ не доказывает всю цепочку. Нажмите на слой, чтобы увидеть его границу.</p>
+          <p>No single document proves the entire chain. Select a layer to see its trust boundary.</p>
         </div>
 
         <div class="layers" data-accordion>
@@ -93,8 +100,8 @@
               <span class="layer-index">01</span><span><strong>SBOM</strong><small>SPDX + CycloneDX</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-sbom">
-              <div><b>Что доказывает</b><p>Runtime SBOM описывает опубликованные файлы, а отдельно помеченный build SBOM — инструменты и зависимости сборки. Форматы: SPDX и CycloneDX.</p></div>
-              <div><b>Граница проверки</b><p><strong>SBOM не доказывает</strong>, что production собран из указанного репозитория или вообще содержит этот артефакт.</p></div>
+              <div><b>What it proves</b><p>The runtime SBOM inventories published files, while a separate build SBOM describes build tools and dependencies. Formats: SPDX and CycloneDX.</p></div>
+              <div><b>Trust boundary</b><p><strong>An SBOM does not prove</strong> that production was built from the stated repository or serves this artifact at all.</p></div>
             </div>
           </article>
 
@@ -103,8 +110,8 @@
               <span class="layer-index">02</span><span><strong>CVE correlation</strong><small>vulnerability database</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-cve">
-              <div><b>Что доказывает</b><p>Какие известные уязвимости Grype и его версия базы сопоставили runtime и build SBOM в момент сканирования.</p></div>
-              <div><b>Граница проверки</b><p>Ноль совпадений не означает отсутствие уязвимостей. Ошибка или недоступная база никогда не отображаются как чистый результат.</p></div>
+              <div><b>What it proves</b><p>Which known vulnerabilities Grype matched against the runtime and build SBOMs at scan time, recording the exact database version.</p></div>
+              <div><b>Trust boundary</b><p>Zero matches does not mean zero vulnerabilities. Errors or an unavailable database are never reported as a clean result.</p></div>
             </div>
           </article>
 
@@ -113,18 +120,18 @@
               <span class="layer-index">03</span><span><strong>SLSA provenance</strong><small>source → builder → subject</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-slsa">
-              <div><b>Что доказывает</b><p>Какой workflow собрал digest артефакта, из какого commit и с какими входными материалами.</p></div>
-              <div><b>Граница проверки</b><p>Provenance требует проверки подписи и доверия к указанной CI identity; сам по себе JSON не аутентичен.</p></div>
+              <div><b>What it proves</b><p>Which workflow built the artifact with this digest, from which commit, and using which input materials.</p></div>
+              <div><b>Trust boundary</b><p>Provenance requires signature verification and trust in the declared CI identity; raw JSON is not authentic on its own.</p></div>
             </div>
           </article>
 
           <article class="layer">
             <button class="layer-toggle" type="button" aria-expanded="true" aria-controls="layer-repro">
-              <span class="layer-index">04</span><span><strong>Воспроизводимая сборка</strong><small>bit-for-bit rebuild</small></span><span class="toggle-icon" aria-hidden="true">−</span>
+              <span class="layer-index">04</span><span><strong>Reproducible build</strong><small>bit-for-bit rebuild</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-repro">
-              <div><b>Что доказывает</b><p>Независимая сборка тех же объявленных входов создаёт байт-в-байт тот же артефакт.</p></div>
-              <div><b>Граница проверки</b><p>Совпадение подтверждает процедуру сборки, но ещё не сообщает, какой артефакт был развёрнут.</p></div>
+              <div><b>What it proves</b><p>An independent rebuild from the same declared inputs produces the exact same artifact byte for byte.</p></div>
+              <div><b>Trust boundary</b><p>A match confirms the build procedure, but does not by itself tell you which artifact is deployed.</p></div>
             </div>
           </article>
 
@@ -133,28 +140,28 @@
               <span class="layer-index">05</span><span><strong>Sigstore / Cosign</strong><small>signature + attestation</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-sign">
-              <div><b>Что доказывает</b><p>Payload подписан ожидаемым GitHub workflow через короткоживущую OIDC identity и не был изменён.</p></div>
-              <div><b>Граница проверки</b><p>Подпись аутентифицирует digest и statement, а не истинность всех утверждений внутри них.</p></div>
+              <div><b>What it proves</b><p>The payload was signed by the expected GitHub workflow via a short-lived OIDC identity and has not been altered.</p></div>
+              <div><b>Trust boundary</b><p>A signature authenticates the digest and statement, not the truthfulness of every claim inside them.</p></div>
             </div>
           </article>
 
           <article class="layer">
             <button class="layer-toggle" type="button" aria-expanded="true" aria-controls="layer-manifest">
-              <span class="layer-index">06</span><span><strong>Подписанный manifest</strong><small>URL → size → sha256</small></span><span class="toggle-icon" aria-hidden="true">−</span>
+              <span class="layer-index">06</span><span><strong>Signed manifest</strong><small>URL → size → sha256</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-manifest">
-              <div><b>Что доказывает</b><p>Какие точные HTML, JavaScript, CSS и Worker inputs относятся к одному подписанному релизу.</p></div>
-              <div><b>Граница проверки</b><p>Manifest задаёт ожидаемые байты. Реальные ответы production нужно скачать и сравнить отдельно.</p></div>
+              <div><b>What it proves</b><p>Which exact HTML, JavaScript, CSS, and Worker source files belong to a single signed release.</p></div>
+              <div><b>Trust boundary</b><p>The manifest declares expected bytes. Live production responses still have to be fetched and compared separately.</p></div>
             </div>
           </article>
 
           <article class="layer">
             <button class="layer-toggle" type="button" aria-expanded="true" aria-controls="layer-verifier">
-              <span class="layer-index">07</span><span><strong>Внешний verifier</strong><small>evidence → production bytes</small></span><span class="toggle-icon" aria-hidden="true">−</span>
+              <span class="layer-index">07</span><span><strong>External verifier</strong><small>evidence → production bytes</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-verifier">
-              <div><b>Что доказывает</b><p>Независимый процесс проверил identity, все связанные digest и фактические ответы production; полный JSON и human report сохраняются в подписанном immutable verification release.</p></div>
-              <div><b>Граница проверки</b><p>Результат относится к указанному релизу и моменту проверки; runtime-компрометация после неё требует нового запуска.</p></div>
+              <div><b>What it proves</b><p>An independent process checked the identity, all linked digests, and live production responses; both the exact JSON and human-readable report are stored in a signed immutable verification release.</p></div>
+              <div><b>Trust boundary</b><p>The result applies to the stated release at verification time; a runtime compromise afterward requires a fresh run.</p></div>
             </div>
           </article>
 
@@ -163,8 +170,8 @@
               <span class="layer-index">08</span><span><strong>SRI + import map integrity</strong><small>browser enforcement</small></span><span class="toggle-icon" aria-hidden="true">−</span>
             </button>
             <div class="layer-body" id="layer-sri">
-              <div><b>Что доказывает</b><p>Обычный SRI проверяет entry script и stylesheet. <code>importmap.integrity</code> задаёт SHA-384 для каждого JS-модуля, включая транзитивный import, а CSP фиксирует хеш самой import map.</p></div>
-              <div><b>Граница проверки</b><p><strong>SRI не защищает HTML-документ</strong>, который содержит ожидаемый hash. Его проверяет внешний verifier. CSS, загруженный через <code>@import</code> или <code>url()</code>, требует отдельного контроля.</p></div>
+              <div><b>What it proves</b><p>Standard Subresource Integrity checks the entry script and stylesheet. <code>importmap.integrity</code> pins SHA-384 for every JS module, including transitive imports, while CSP pins the hash of the import map itself.</p></div>
+              <div><b>Trust boundary</b><p><strong>SRI does not protect the HTML document</strong> that carries the expected hash—that is checked by the external verifier. CSS loaded via <code>@import</code> or <code>url()</code> requires separate controls.</p></div>
             </div>
           </article>
         </div>
@@ -172,42 +179,42 @@
 
       <section class="verify-section" id="verify" aria-labelledby="verify-title">
         <div class="verify-copy">
-          <div class="section-kicker">03 / Независимая проверка</div>
-          <h2 id="verify-title">Не верьте этому сайту.<br>Проверьте его.</h2>
+          <div class="section-kicker">03 / Independent verification</div>
+          <h2 id="verify-title">Don’t trust this site.<br>Verify it.</h2>
           <p>
-            <strong>Проверено CI:</strong> подписи Cosign, provenance, SBOM, CVE scan и воспроизводимая
-            сборка. <strong>Проверено сейчас в браузере:</strong> identity текущего deployment,
-            SHA-256 всех production-файлов, SHA-384 Subresource Integrity и полный
-            <code>importmap.integrity</code> для JavaScript-модулей.
+            <strong>Verified by CI:</strong> Cosign signatures, provenance, SBOMs, CVE scan, and
+            reproducible build. <strong>Verified now in your browser:</strong> current deployment
+            identity, SHA-256 of all production files, SHA-384 Subresource Integrity, and complete
+            <code>importmap.integrity</code> for JavaScript modules.
           </p>
           <p>
-            Онлайн-verifier скачивает production-файлы напрямую. Код с проверяемого сайта не исполняется.
-            Для независимой полной проверки подписей и сборки используйте локальную команду справа.
+            The online verifier fetches production files directly and never executes code from the
+            target site. For a full local verification of signatures and the rebuild, run the command on the right.
           </p>
           <div class="verify-actions">
-            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Проверить текущий deployment онлайн</a>
+            <a class="button primary" href="https://verify.webappsec.metalagman.dev">Verify current deployment online</a>
           </div>
         </div>
-        <div class="terminal" aria-label="Команда запуска verifier">
+        <div class="terminal" aria-label="Verifier CLI command">
           <div class="terminal-bar"><span></span><span></span><span></span><b>shell</b></div>
           <pre><code><span class="prompt">$</span> git clone https://github.com/metalagman/webappsec
 <span class="prompt">$</span> cd webappsec
 <span class="prompt">$</span> git checkout &lt;tag&gt; &amp;&amp; npm ci &amp;&amp; npm run tools:signing
 <span class="prompt">$</span> npm run verify:release -- --release &lt;tag&gt; --rebuild</code></pre>
-          <button class="copy-command" type="button" data-copy="npm run verify:release -- --release &lt;tag&gt; --rebuild">Копировать команду</button>
+          <button class="copy-command" type="button" data-copy="npm run verify:release -- --release &lt;tag&gt; --rebuild">Copy command</button>
         </div>
       </section>
 
       <section class="tamper" aria-labelledby="tamper-title">
         <div class="tamper-mark" aria-hidden="true">!</div>
-        <div><div class="section-kicker danger">Негативный сценарий</div><h2 id="tamper-title">Один изменённый байт ломает цепочку</h2></div>
+        <div><div class="section-kicker danger">Negative scenario</div><h2 id="tamper-title">One altered byte breaks the chain</h2></div>
         <div class="tamper-log"><code>FAIL production-bytes</code><p>/app/app.js<br>expected <span>82c1…91af</span><br>received <strong>7bd4…2e10</strong></p></div>
       </section>
     </main>
 
     <footer>
-      <p>Открытая демонстрация software supply-chain verification.</p>
-      <div><a href="https://github.com/metalagman/webappsec">Исходный код</a><a href="https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml">Verifier runs</a><a href="https://github.com/metalagman/webappsec/releases">Releases</a></div>
+      <p>Open demonstration of software supply-chain verification.</p>
+      <div><a href="https://github.com/metalagman/webappsec">Source code</a><a href="https://github.com/metalagman/webappsec/actions/workflows/verify-production.yml">Verifier runs</a><a href="https://github.com/metalagman/webappsec/releases">Releases</a></div>
     </footer>
   </body>
 </html>

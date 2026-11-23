@@ -17,7 +17,11 @@ const contentTypes = new Map([
 async function routeBuild(page, { tamperJavaScript = false } = {}) {
   await page.route(`${origin}/**`, async (route) => {
     const url = new URL(route.request().url());
-    const relative = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const relative = url.pathname === "/"
+      ? "index.html"
+      : url.pathname === "/ru" || url.pathname === "/ru/"
+        ? "ru/index.html"
+        : url.pathname.slice(1);
     let filename = path.join(outputDirectory, relative);
     let status = 200;
 
@@ -63,7 +67,7 @@ test("valid release loads with local resources and usable interactions", async (
 
   await expect(page).toHaveTitle(/Proof of Deploy/);
   await expect(page.locator("html")).toHaveAttribute("data-enhanced", "true");
-  await expect(page.getByRole("heading", { name: /От коммита до байтов/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /From commit to bytes/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "GitHub ↗" })).toHaveAttribute(
     "href",
     "https://github.com/metalagman/webappsec",
@@ -71,7 +75,7 @@ test("valid release loads with local resources and usable interactions", async (
 
   await page.locator("body").focus();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "К содержанию" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(`${origin}/#content`);
 
@@ -91,7 +95,16 @@ test("valid release loads with local resources and usable interactions", async (
   const copy = page.locator(".copy-command");
   await copy.focus();
   await page.keyboard.press("Enter");
-  await expect(copy).toHaveText(/Скопировано|Скопируйте из терминала/);
+  await expect(copy).toHaveText(/Copied|Copy from terminal/);
+
+  await page.getByRole("link", { name: "RU", exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/ru/`);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ru");
+  await expect(page.getByRole("heading", { name: /От коммита до байтов/ })).toBeVisible();
+  await page.locator(".copy-command").click();
+  await expect(page.locator(".copy-command")).toHaveText(/Скопировано|Скопируйте из терминала/);
+  await page.getByRole("link", { name: "EN", exact: true }).click();
+  await expect(page).toHaveURL(`${origin}/`);
 
   expect(consoleErrors).toEqual([]);
   await page.evaluate(() => {
@@ -115,9 +128,9 @@ test("mobile and reduced-motion layouts remain usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(origin);
 
-  await expect(page.getByRole("heading", { name: /От коммита до байтов/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /From commit to bytes/ })).toBeVisible();
   const verifierLink = page
-    .getByRole("link", { name: "Проверить текущий deployment онлайн" })
+    .getByRole("link", { name: "Verify current deployment online" })
     .first();
   await expect(verifierLink).toBeVisible();
   await expect(verifierLink).toHaveAttribute("href", "https://verify.webappsec.metalagman.dev");
@@ -148,7 +161,7 @@ test("browser rejects a JavaScript response changed behind unchanged HTML", asyn
   await page.goto(origin);
 
   await expect(page.locator("html")).not.toHaveAttribute("data-enhanced", "true");
-  await expect(page.getByRole("heading", { name: /От коммита до байтов/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /From commit to bytes/ })).toBeVisible();
   for (const panel of await page.locator(".layer-body").all()) await expect(panel).toBeVisible();
   expect(errors.some((message) => /integrity|digest/i.test(message))).toBe(true);
 });

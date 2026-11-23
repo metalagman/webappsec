@@ -82,6 +82,11 @@ test("Worker serves root explicitly while preserving exact signed HTML paths", a
   await worker.fetch(notFoundPage, env);
   assert.equal(new URL(calls[2].url).pathname, "/security-policy.txt");
   assert.equal(calls[3], notFoundPage);
+
+  const ruPage = new Request("https://webappsec.metalagman.dev/ru/");
+  await worker.fetch(ruPage, env);
+  assert.equal(new URL(calls[4].url).pathname, "/security-policy.txt");
+  assert.equal(new URL(calls[5].url).pathname, "/ru/index.html");
 });
 
 test("Worker delegates exact bytes and adds release, cache, and security headers", async () => {

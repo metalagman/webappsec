@@ -124,7 +124,9 @@ test("verifier build inventory contains only the intended page and addressed ass
   await buildVerifierSite({ outputDirectory });
   const rootEntries = (await readdir(outputDirectory)).sort();
   const assetEntries = (await readdir(path.join(outputDirectory, "app"))).sort();
-  assert.deepEqual(rootEntries, ["app", "index.html"]);
+  const ruEntries = (await readdir(path.join(outputDirectory, "ru"))).sort();
+  assert.deepEqual(rootEntries, ["app", "index.html", "ru"]);
+  assert.deepEqual(ruEntries, ["index.html"]);
   assert.equal(assetEntries.length, 2);
   assert.ok(assetEntries.every((name) => /^verifier\.[a-f0-9]{12}\.(?:css|js)$/.test(name)));
 });

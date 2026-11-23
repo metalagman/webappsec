@@ -30,8 +30,9 @@ export async function buildVerifierSite({
   const sourceMetadata = await lstat(sourceDirectory);
   if (sourceMetadata.isSymbolicLink() || !sourceMetadata.isDirectory()) throw new Error("verifier source must be a regular directory");
 
-  const [templateBytes, styleBytes, appTemplateBytes, engineBytes] = await Promise.all([
+  const [templateBytes, ruTemplateBytes, styleBytes, appTemplateBytes, engineBytes] = await Promise.all([
     readRegularFile(path.join(sourceDirectory, "index.html")),
+    readRegularFile(path.join(sourceDirectory, "ru/index.html")),
     readRegularFile(path.join(sourceDirectory, "styles.css")),
     readRegularFile(path.join(sourceDirectory, "app.js")),
     readRegularFile(enginePath),
@@ -48,21 +49,28 @@ export async function buildVerifierSite({
   const styleIntegrity = `sha384-${hash("sha384", styleBytes, "base64")}`;
   const appIntegrity = `sha384-${hash("sha384", appBytes, "base64")}`;
 
-  let html = replaceOnce(templateBytes.toString("utf8"), "{{STYLE_HREF}}", `/app/${styleName}`);
-  html = replaceOnce(html, "{{STYLE_INTEGRITY}}", styleIntegrity);
-  html = replaceOnce(html, "{{SCRIPT_SRC}}", `/app/${appName}`);
-  html = replaceOnce(html, "{{SCRIPT_INTEGRITY}}", appIntegrity);
+  const renderPage = (bytes) => {
+    let page = replaceOnce(bytes.toString("utf8"), "{{STYLE_HREF}}", `/app/${styleName}`);
+    page = replaceOnce(page, "{{STYLE_INTEGRITY}}", styleIntegrity);
+    page = replaceOnce(page, "{{SCRIPT_SRC}}", `/app/${appName}`);
+    page = replaceOnce(page, "{{SCRIPT_INTEGRITY}}", appIntegrity);
+    return page;
+  };
+  const html = renderPage(templateBytes);
+  const ruHtml = renderPage(ruTemplateBytes);
 
   await rm(outputDirectory, { recursive: true, force: true });
   await mkdir(path.join(outputDirectory, "app"), { recursive: true });
+  await mkdir(path.join(outputDirectory, "ru"), { recursive: true });
   await Promise.all([
     writeFile(path.join(outputDirectory, "index.html"), html),
+    writeFile(path.join(outputDirectory, "ru/index.html"), ruHtml),
     writeFile(path.join(outputDirectory, "app", styleName), styleBytes),
     writeFile(path.join(outputDirectory, "app", appName), appBytes),
   ]);
   return {
     outputDirectory,
-    files: [`app/${appName}`, `app/${styleName}`, "index.html"].sort(),
+    files: [`app/${appName}`, `app/${styleName}`, "index.html", "ru/index.html"].sort(),
   };
 }
 

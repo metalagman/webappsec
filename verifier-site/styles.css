@@ -25,7 +25,10 @@ code, pre { font-family: var(--mono); }
 .site-header { display: flex; justify-content: space-between; align-items: center; min-height: 76px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; gap: .7rem; align-items: center; font: 700 .95rem var(--mono); text-decoration: none; text-transform: uppercase; letter-spacing: .06em; }
 .brand span { display: grid; place-items: center; width: 2.2rem; aspect-ratio: 1; border: 1px solid var(--green); color: var(--green); }
-nav { display: flex; gap: 1.4rem; color: var(--muted); font-size: .9rem; }
+nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1.4rem; color: var(--muted); font-size: .9rem; }
+.lang-switch { display: inline-flex; align-items: center; gap: .35rem; font: 700 .78rem var(--mono); color: var(--muted); }
+.lang-switch a { text-decoration: none; }
+.lang-switch a[aria-current="page"] { color: var(--text); }
 .intro { padding: 6.5rem 0 3.5rem; max-width: 880px; }
 .eyebrow, .section-label { margin: 0 0 .55rem; color: var(--green); font: 700 .72rem var(--mono); letter-spacing: .13em; text-transform: uppercase; }
 .pulse { display: inline-block; width: .55rem; height: .55rem; margin-right: .45rem; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 .35rem rgb(115 240 173 / 12%); animation: pulse 1.8s ease-in-out infinite; }
