@@ -84,10 +84,10 @@ Every vulnerability report records the pinned Grype version, scan timestamp, vul
 Run the verifier from a trusted checkout rather than from the website itself:
 
 ```sh
-git checkout v0.4.0
+git checkout v0.5.0
 npm ci
 npm run tools:signing
-npm run verify:release -- --release v0.4.0 --rebuild
+npm run verify:release -- --release v0.5.0 --rebuild
 ```
 
 The command accepts only an explicit SemVer tag, downloads the matching GitHub Release, and verifies Cosign bundles against the exact GitHub OIDC issuer, repository, workflow path, and tag ref. It then verifies the signed evidence index, SLSA and CycloneDX in-toto subjects, SPDX/CycloneDX contents, and completed vulnerability reports, rebuilds the manifest and tar from a clean tag checkout, and only then inspects live production.

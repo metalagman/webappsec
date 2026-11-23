@@ -84,10 +84,10 @@ npm run evidence:generate -- --release .artifacts/releases/<manifest-sha256> --o
 Верификатор запускается из доверенного checkout, а не со страницы сайта:
 
 ```sh
-git checkout v0.4.0
+git checkout v0.5.0
 npm ci
 npm run tools:signing
-npm run verify:release -- --release v0.4.0 --rebuild
+npm run verify:release -- --release v0.5.0 --rebuild
 ```
 
 Команда принимает только явный SemVer-тег, скачивает соответствующий GitHub Release и проверяет Cosign bundles с точным GitHub OIDC issuer, репозиторием, путём workflow и ссылкой на тег. Затем она проверяет подписанный индекс доказательств, SLSA/CycloneDX in-toto subjects, содержимое SPDX/CycloneDX и завершённые отчёты об уязвимостях, воспроизводит манифест и tar из чистого checkout тега и только после этого проверяет production.
